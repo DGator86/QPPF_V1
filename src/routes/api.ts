@@ -7,15 +7,22 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { QPPFAlgorithm, QPPFSignal, QPPFState } from '../services/qppf-algorithm';
 import { UnusualWhalesClient } from '../services/unusual-whales-client';
+import { AlpacaTradingService, AlpacaCredentials, TradeSignal } from '../services/alpaca-trading-service';
+import { RiskManager } from '../services/risk-manager';
 
-// Global algorithm instance (in production, use proper state management)
+// Global instances (in production, use proper state management)
 let qppfAlgorithm: QPPFAlgorithm | null = null;
+let alpacaService: AlpacaTradingService | null = null;
+let riskManager: RiskManager | null = null;
 let isRunning = false;
 let latestSignal: QPPFSignal | null = null;
 
 // API configuration interface
 interface APIConfig {
   unusualWhalesApiKey?: string;
+  alpacaApiKey?: string;
+  alpacaSecretKey?: string;
+  alpacaPaper?: boolean;
   symbol?: string;
 }
 
@@ -40,8 +47,31 @@ api.post('/initialize', async (c) => {
 
     const symbol = config.symbol || 'SPY';
     
-    // Initialize the algorithm
+    // Initialize the QPPF algorithm
     qppfAlgorithm = new QPPFAlgorithm(config.unusualWhalesApiKey, symbol);
+    
+    // Initialize Alpaca service if credentials provided
+    if (config.alpacaApiKey && config.alpacaSecretKey) {
+      const alpacaCredentials: AlpacaCredentials = {
+        apiKey: config.alpacaApiKey,
+        secretKey: config.alpacaSecretKey,
+        paper: config.alpacaPaper ?? true, // Default to paper trading
+      };
+      
+      alpacaService = new AlpacaTradingService(alpacaCredentials);
+      riskManager = new RiskManager(); // Use default risk parameters
+      
+      // Test Alpaca connection
+      const account = await alpacaService.getAccount();
+      if (!account) {
+        return c.json({ 
+          error: 'Failed to connect to Alpaca API. Please check your credentials.',
+          success: false 
+        }, 400);
+      }
+      
+      console.log(`Alpaca service initialized (Paper: ${alpacaCredentials.paper})`);
+    }
     
     console.log(`QPPF Algorithm initialized for ${symbol}`);
     
@@ -49,6 +79,8 @@ api.post('/initialize', async (c) => {
       success: true,
       message: `QPPF Algorithm initialized for ${symbol}`,
       symbol: symbol,
+      alpacaEnabled: alpacaService !== null,
+      alpacaPaper: config.alpacaPaper ?? true,
       timestamp: new Date().toISOString(),
     });
 
@@ -280,6 +312,293 @@ api.post('/execute-trade', async (c) => {
 });
 
 /**
+ * Execute real trade through Alpaca
+ */
+api.post('/execute-alpaca-trade', async (c) => {
+  if (!qppfAlgorithm || !alpacaService || !riskManager) {
+    return c.json({ 
+      error: 'QPPF Algorithm or Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  if (!latestSignal) {
+    return c.json({ 
+      error: 'No signal available. Generate a signal first.',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    // Get account information
+    const account = await alpacaService.getAccount();
+    if (!account) {
+      return c.json({ 
+        error: 'Failed to get Alpaca account information',
+        success: false 
+      }, 500);
+    }
+
+    // Get current positions
+    const positions = await alpacaService.getPositions();
+
+    // Get current market price
+    const currentPrice = await alpacaService.getCurrentPrice(latestSignal.marketData.symbol);
+    if (!currentPrice) {
+      return c.json({ 
+        error: 'Failed to get current market price',
+        success: false 
+      }, 500);
+    }
+
+    // Assess risk
+    const riskAssessment = riskManager.assessTrade(
+      latestSignal,
+      latestSignal.uwSignals,
+      account,
+      positions,
+      currentPrice
+    );
+
+    // Check if we should execute
+    if (!riskManager.shouldExecuteTrade(riskAssessment)) {
+      return c.json({
+        success: false,
+        message: `Trade rejected by risk management`,
+        recommendation: riskAssessment.recommendation,
+        reasons: riskAssessment.reasons,
+        riskAssessment,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Create trade signal for Alpaca
+    const tradeSignal: TradeSignal = {
+      symbol: latestSignal.marketData.symbol,
+      direction: latestSignal.direction === 'LONG' ? 'long' : 'short',
+      quantity: riskAssessment.positionSize,
+      confidence: latestSignal.confidence,
+      orderType: 'market',
+    };
+
+    // Execute the trade
+    const tradeResult = await alpacaService.executeTrade(tradeSignal);
+
+    if (tradeResult.success) {
+      return c.json({
+        success: true,
+        message: 'Real trade executed successfully',
+        tradeResult,
+        riskAssessment,
+        signal: {
+          direction: latestSignal.direction,
+          confidence: latestSignal.confidence,
+          strength: latestSignal.strength,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: 'Trade execution failed',
+        error: tradeResult.error,
+        riskAssessment,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+  } catch (error) {
+    console.error('Error executing Alpaca trade:', error);
+    return c.json({ 
+      error: 'Failed to execute Alpaca trade',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get Alpaca account information
+ */
+api.get('/alpaca/account', async (c) => {
+  if (!alpacaService) {
+    return c.json({ 
+      error: 'Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const account = await alpacaService.getAccount();
+    if (!account) {
+      return c.json({ 
+        error: 'Failed to get account information',
+        success: false 
+      }, 500);
+    }
+
+    return c.json({
+      success: true,
+      account,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error fetching Alpaca account:', error);
+    return c.json({ 
+      error: 'Failed to fetch account information',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get Alpaca positions
+ */
+api.get('/alpaca/positions', async (c) => {
+  if (!alpacaService) {
+    return c.json({ 
+      error: 'Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const positions = await alpacaService.getPositions();
+    
+    return c.json({
+      success: true,
+      positions,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error fetching Alpaca positions:', error);
+    return c.json({ 
+      error: 'Failed to fetch positions',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get Alpaca recent orders
+ */
+api.get('/alpaca/orders', async (c) => {
+  if (!alpacaService) {
+    return c.json({ 
+      error: 'Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const orders = await alpacaService.getRecentOrders(20);
+    
+    return c.json({
+      success: true,
+      orders,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error fetching Alpaca orders:', error);
+    return c.json({ 
+      error: 'Failed to fetch orders',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Close Alpaca position
+ */
+api.post('/alpaca/close-position/:symbol', async (c) => {
+  if (!alpacaService) {
+    return c.json({ 
+      error: 'Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const symbol = c.req.param('symbol');
+    const result = await alpacaService.closePosition(symbol);
+
+    return c.json({
+      success: result.success,
+      message: result.message,
+      order: result.order,
+      error: result.error,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error closing position:', error);
+    return c.json({ 
+      error: 'Failed to close position',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get risk assessment for current signal
+ */
+api.get('/risk-assessment', async (c) => {
+  if (!qppfAlgorithm || !alpacaService || !riskManager) {
+    return c.json({ 
+      error: 'Services not fully initialized',
+      success: false 
+    }, 400);
+  }
+
+  if (!latestSignal) {
+    return c.json({ 
+      error: 'No signal available',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const account = await alpacaService.getAccount();
+    const positions = await alpacaService.getPositions();
+    const currentPrice = await alpacaService.getCurrentPrice(latestSignal.marketData.symbol);
+
+    if (!account || !currentPrice) {
+      return c.json({ 
+        error: 'Failed to get required data for risk assessment',
+        success: false 
+      }, 500);
+    }
+
+    const riskAssessment = riskManager.assessTrade(
+      latestSignal,
+      latestSignal.uwSignals,
+      account,
+      positions,
+      currentPrice
+    );
+
+    const riskReport = riskManager.generateRiskReport(account, positions);
+
+    return c.json({
+      success: true,
+      riskAssessment,
+      riskReport,
+      currentPrice,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error generating risk assessment:', error);
+    return c.json({ 
+      error: 'Failed to generate risk assessment',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
  * Reset algorithm state
  */
 api.post('/reset', async (c) => {
@@ -376,25 +695,53 @@ api.post('/stop', async (c) => {
  */
 api.get('/info', async (c) => {
   return c.json({
-    name: 'QPPF Signals API',
-    version: '1.0.0',
-    description: 'Quantum Potential Price Flow Algorithm with Unusual Whales Integration',
+    name: 'QPPF Signals API with Alpaca Integration',
+    version: '2.0.0',
+    description: 'Quantum Potential Price Flow Algorithm with Unusual Whales Integration and Live Alpaca Trading',
     endpoints: {
-      initialize: 'POST /api/initialize - Initialize algorithm with API keys',
+      // Core QPPF Algorithm
+      initialize: 'POST /api/initialize - Initialize algorithm with API keys (now includes Alpaca)',
       status: 'GET /api/status - Get current algorithm status',
       signal: 'POST /api/signal - Generate a single trading signal',
-      'options-flow': 'GET /api/options-flow/:symbol - Get options flow data',
-      gex: 'GET /api/gex/:symbol - Get Gamma Exposure data',
-      'dark-pool': 'GET /api/dark-pool/:symbol - Get Dark Pool data',
       'execute-trade': 'POST /api/execute-trade - Simulate trade execution',
+      'execute-alpaca-trade': 'POST /api/execute-alpaca-trade - Execute real trade via Alpaca',
       reset: 'POST /api/reset - Reset algorithm state',
       start: 'POST /api/start - Start continuous signal generation',
       stop: 'POST /api/stop - Stop continuous signal generation',
+      
+      // Unusual Whales Data
+      'options-flow': 'GET /api/options-flow/:symbol - Get options flow data',
+      gex: 'GET /api/gex/:symbol - Get Gamma Exposure data',
+      'dark-pool': 'GET /api/dark-pool/:symbol - Get Dark Pool data',
+      
+      // Alpaca Trading
+      'alpaca-account': 'GET /api/alpaca/account - Get Alpaca account information',
+      'alpaca-positions': 'GET /api/alpaca/positions - Get current positions',
+      'alpaca-orders': 'GET /api/alpaca/orders - Get recent orders',
+      'alpaca-close-position': 'POST /api/alpaca/close-position/:symbol - Close position',
+      
+      // Risk Management
+      'risk-assessment': 'GET /api/risk-assessment - Get risk assessment for current signal',
+    },
+    features: {
+      unusualWhalesIntegration: true,
+      alpacaLiveTrading: true,
+      riskManagement: true,
+      positionSizing: true,
+      paperTrading: true,
+      realTimeSignals: true,
     },
     unusualWhalesEndpoints: {
       optionsFlow: '/option-trades/flow-alerts',
       darkPool: '/darkpool',
       gex: '/gex',
+    },
+    alpacaIntegration: {
+      paperTradingSupported: true,
+      liveTradingSupported: true,
+      riskManagementEnabled: true,
+      supportedOrderTypes: ['market', 'limit'],
+      supportedAssets: ['US Equities', 'ETFs'],
     },
     timestamp: new Date().toISOString(),
   });

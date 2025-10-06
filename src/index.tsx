@@ -85,37 +85,100 @@ app.get('/', (c) => {
                 <h2 class="text-xl font-bold text-gray-800 mb-4">
                     <i class="fas fa-cogs mr-2"></i>Configuration
                 </h2>
-                <div class="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Unusual Whales API Key</label>
-                        <input type="password" id="uw-api-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter API key">
+                
+                <!-- Unusual Whales Configuration -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-whale mr-2 text-blue-600"></i>Unusual Whales
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                            <input type="password" id="uw-api-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter Unusual Whales API key">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
+                            <input type="text" id="symbol" value="SPY" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="SPY">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
-                        <input type="text" id="symbol" value="SPY" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="SPY">
+                </div>
+
+                <!-- Alpaca Configuration -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">
+                        <i class="fas fa-mountain mr-2 text-green-600"></i>Alpaca Trading (Optional)
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                            <input type="password" id="alpaca-api-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional: Alpaca API Key">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
+                            <input type="password" id="alpaca-secret-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional: Alpaca Secret Key">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Trading Mode</label>
+                            <select id="alpaca-paper" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="true">Paper Trading</option>
+                                <option value="false">Live Trading</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="flex items-end">
-                        <button id="initialize-btn" class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition duration-200">
-                            <i class="fas fa-play mr-2"></i>Initialize
-                        </button>
-                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Leave Alpaca fields empty for signal-only mode. Fill them to enable live trading.
+                    </p>
+                </div>
+
+                <!-- Initialize Button -->
+                <div class="flex justify-center">
+                    <button id="initialize-btn" class="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-200">
+                        <i class="fas fa-rocket mr-2"></i>Initialize System
+                    </button>
                 </div>
             </div>
 
             <!-- Trading Controls -->
-            <div class="grid md:grid-cols-4 gap-4 mb-8">
-                <button id="signal-btn" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200 disabled:opacity-50">
-                    <i class="fas fa-bolt mr-2"></i>Generate Signal
-                </button>
-                <button id="start-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 disabled:opacity-50">
-                    <i class="fas fa-play mr-2"></i>Start Auto
-                </button>
-                <button id="stop-btn" class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition duration-200 disabled:opacity-50">
-                    <i class="fas fa-stop mr-2"></i>Stop
-                </button>
-                <button id="reset-btn" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition duration-200 disabled:opacity-50">
-                    <i class="fas fa-undo mr-2"></i>Reset
-                </button>
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-controls mr-2"></i>Trading Controls
+                </h2>
+                
+                <!-- Signal Generation -->
+                <div class="mb-4">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Signal Generation</h3>
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <button id="signal-btn" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-bolt mr-2"></i>Generate Signal
+                        </button>
+                        <button id="start-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-play mr-2"></i>Start Auto
+                        </button>
+                        <button id="stop-btn" class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-stop mr-2"></i>Stop
+                        </button>
+                        <button id="reset-btn" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-undo mr-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Trade Execution -->
+                <div>
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Trade Execution</h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <button id="execute-btn" class="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-play-circle mr-2"></i>Simulate Trade
+                        </button>
+                        <button id="execute-alpaca-btn" class="bg-green-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-800 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-mountain mr-2"></i>Execute Live Trade
+                        </button>
+                        <button id="risk-assessment-btn" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-200 disabled:opacity-50">
+                            <i class="fas fa-shield-alt mr-2"></i>Risk Assessment
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Current Signal Display -->
@@ -157,10 +220,78 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
+            </div>
+
+            <!-- Alpaca Account Info (Hidden by default) -->
+            <div id="alpaca-account-display" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-mountain mr-2 text-green-600"></i>Alpaca Account
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div id="portfolio-value" class="text-3xl font-bold text-green-600 mb-2">$0</div>
+                        <div class="text-sm text-gray-600">Portfolio Value</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="buying-power" class="text-3xl font-bold text-blue-600 mb-2">$0</div>
+                        <div class="text-sm text-gray-600">Buying Power</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="cash-balance" class="text-3xl font-bold text-purple-600 mb-2">$0</div>
+                        <div class="text-sm text-gray-600">Cash</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="day-trades" class="text-3xl font-bold text-gray-600 mb-2">0</div>
+                        <div class="text-sm text-gray-600">Day Trades</div>
+                    </div>
+                </div>
+
+                <!-- Current Positions -->
                 <div class="mt-6">
-                    <button id="execute-btn" class="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition duration-200 disabled:opacity-50">
-                        <i class="fas fa-play-circle mr-2"></i>Simulate Trade
-                    </button>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Current Positions</h3>
+                    <div id="positions-list" class="space-y-2">
+                        <div class="text-gray-500 text-center py-4">No positions</div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Recent Orders</h3>
+                    <div id="orders-list" class="space-y-2">
+                        <div class="text-gray-500 text-center py-4">No recent orders</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Assessment Display (Hidden by default) -->
+            <div id="risk-display" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-shield-alt mr-2 text-purple-600"></i>Risk Assessment
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div id="risk-score" class="text-3xl font-bold text-red-600 mb-2">0%</div>
+                        <div class="text-sm text-gray-600">Risk Score</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="position-size" class="text-3xl font-bold text-blue-600 mb-2">0</div>
+                        <div class="text-sm text-gray-600">Position Size</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="risk-amount" class="text-3xl font-bold text-purple-600 mb-2">$0</div>
+                        <div class="text-sm text-gray-600">Risk Amount</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="recommendation" class="text-3xl font-bold text-gray-600 mb-2">-</div>
+                        <div class="text-sm text-gray-600">Recommendation</div>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h4 class="font-semibold text-gray-700 mb-2">Risk Factors</h4>
+                    <ul id="risk-reasons" class="text-sm text-gray-700 space-y-1">
+                        <li>No assessment available</li>
+                    </ul>
                 </div>
             </div>
 
