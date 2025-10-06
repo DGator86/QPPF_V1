@@ -2,193 +2,178 @@
 
 ## Project Overview
 - **Name**: QPPF Signals
-- **Goal**: Advanced trading signal generation using Quantum Potential Price Flow (QPPF) algorithm with Unusual Whales API integration
-- **Features**: Real-time options flow analysis, GEX data processing, dark pool monitoring, and intelligent trading signal generation
+- **Goal**: Advanced trading signals website integrating Quantum Potential Price Flow algorithm with Unusual Whales options flow data
+- **Features**: Real-time signal generation, options flow analysis, sentiment tracking, trade simulation, responsive web interface
 
-## 🚀 Live Demo
-- **Production**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev
-- **API Health**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/api/health
-- **GitHub**: To be deployed
+## 🚀 Live URLs
+- **Development**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev
+- **API Health**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/health
+- **API Info**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/api/info
 
-## 📊 Current Features (Completed)
+## 🔧 Currently Implemented Features
+✅ **Unusual Whales API Integration**
+- Options flow alerts with corrected endpoints (`/option-trades/flow-alerts`)
+- Dark pool data (`/darkpool`)
+- Gamma exposure (GEX) data (`/gex`)
+- Real-time sentiment analysis and signal processing
 
-### ✅ Core Algorithm
-- **QPPF Algorithm**: Advanced quantum-inspired price flow analysis
-- **Unusual Whales Integration**: Real-time options flow, GEX, and dark pool data
-- **Signal Generation**: Direction (LONG/SHORT/FLAT), confidence scores, and strength metrics
-- **Multi-factor Analysis**: Combines sentiment, volume, and momentum indicators
+✅ **QPPF Algorithm Core**
+- Quantum Potential Price Flow signal generation
+- Multi-factor confidence scoring
+- Sentiment-based directional analysis
+- Mock market data integration (ready for real data feeds)
 
-### ✅ API Endpoints
-- `POST /api/initialize` - Initialize algorithm with API keys
-- `POST /api/signal` - Generate trading signals
-- `GET /api/status` - Algorithm status and statistics
-- `GET /api/options-flow/:symbol` - Options flow data
-- `GET /api/gex/:symbol` - Gamma Exposure data
-- `GET /api/dark-pool/:symbol` - Dark pool trading data
-- `POST /api/execute-trade` - Simulate trade execution
-- `POST /api/start` - Start continuous signal generation
-- `POST /api/stop` - Stop signal generation
-- `POST /api/reset` - Reset algorithm state
+✅ **Responsive Web Interface**
+- Modern gradient design with Tailwind CSS
+- Real-time data displays and interactive controls
+- Signal visualization with confidence/strength meters
+- Options flow alerts table with color-coded sentiment
 
-### ✅ Frontend Interface
-- **Responsive Design**: Modern UI with Tailwind CSS
-- **Real-time Updates**: Automatic status and signal updates
-- **Interactive Controls**: Initialize, generate signals, start/stop automation
-- **Data Visualization**: Options flow alerts, market data, algorithm stats
-- **Configuration Panel**: API key setup and symbol selection
+✅ **API Backend (Hono Framework)**
+- RESTful API with comprehensive endpoints
+- Algorithm initialization and control
+- Signal generation and trade simulation
+- Status monitoring and statistics
 
-### ✅ Data Integration
-- **Unusual Whales API**: Corrected endpoints implementation
-  - Options Flow: `/option-trades/flow-alerts`
-  - Dark Pool: `/darkpool`
-  - GEX: `/gex`
-- **Mock Data Fallback**: Comprehensive demo data when API unavailable
-- **Error Handling**: Graceful degradation and user notifications
+✅ **Trading Controls**
+- Algorithm initialization with API key management
+- Manual signal generation
+- Automatic signal generation mode
+- Trade simulation and position tracking
+- Algorithm state reset functionality
 
-## 🔧 Technical Architecture
+## 📊 Data Architecture
+- **Data Models**: 
+  - `UnusualWhalesAlert` - Options flow data structure
+  - `QPPFSignal` - Trading signal with confidence metrics
+  - `QPPFState` - Algorithm state and statistics
+  - `MarketData` - Real-time price and volume data
 
-### Backend (Hono + TypeScript)
-```
-src/
-├── index.tsx              # Main Hono application
-├── routes/api.ts          # API route handlers
-├── services/
-│   ├── unusual-whales-client.ts  # UW API client
-│   └── qppf-algorithm.ts         # QPPF algorithm core
-└── ...
-```
+- **Storage Services**: In-memory state management (ready for Cloudflare D1 integration)
+- **Data Flow**: 
+  1. Unusual Whales API → Raw options data
+  2. QPPF Algorithm → Signal processing
+  3. Frontend → Real-time display
+  4. User Actions → API calls → Backend processing
 
-### Frontend (Vanilla JS + Tailwind)
-```
-public/static/
-└── app.js                 # Frontend application logic
-```
+## 🎯 Functional API Endpoints
 
-### Data Models
-- **UnusualWhalesAlert**: Options flow alerts with sentiment analysis
-- **QPPFSignal**: Trading signals with confidence and reasoning
-- **MarketData**: Real-time price and volume data
-- **OptionsFlowSignals**: Processed UW sentiment and flow metrics
+### Core Algorithm
+- **POST** `/api/initialize` - Initialize algorithm with Unusual Whales API key
+- **GET** `/api/status` - Get current algorithm state and statistics
+- **POST** `/api/signal` - Generate single trading signal
+- **POST** `/api/start` - Start continuous signal generation
+- **POST** `/api/stop` - Stop signal generation
+- **POST** `/api/reset` - Reset algorithm state
 
-## 📈 Algorithm Logic
+### Data Access
+- **GET** `/api/options-flow/:symbol?` - Get Unusual Whales options flow alerts
+- **GET** `/api/gex/:symbol?` - Get Gamma Exposure data
+- **GET** `/api/dark-pool/:symbol?` - Get Dark Pool trading data
+- **POST** `/api/execute-trade` - Simulate trade execution
 
-### Signal Generation Process
-1. **Data Fetching**: Retrieve options flow, GEX, and dark pool data
-2. **Sentiment Analysis**: Process alerts for bullish/bearish sentiment
-3. **Confidence Calculation**: Multi-factor confidence scoring
-4. **Direction Analysis**: QPPF-based directional bias calculation
-5. **Reason Generation**: Detailed explanations for trade recommendations
+### System
+- **GET** `/api/health` - Health check endpoint
+- **GET** `/api/info` - API documentation and endpoints list
 
-### Key Metrics
-- **Sentiment Score**: Range [-1, 1] indicating market sentiment
-- **Confidence**: Percentage confidence in signal accuracy
-- **Strength**: Overall signal strength based on multiple factors
-- **Flow Analysis**: Large trades detection and premium analysis
+## 🔧 Features Not Yet Implemented
+❌ **Data Persistence**
+- Cloudflare D1 database integration for trade history
+- Historical signal storage and analysis
+- User session management
 
-## 🛠️ Deployment Status
+❌ **Real-Time Updates**
+- Server-Sent Events (SSE) for live data streaming
+- WebSocket-like functionality for instant updates
+- Live price feeds integration
 
-### ✅ Current Deployment
-- **Platform**: E2B Sandbox Environment
-- **Status**: ✅ Active and Running
-- **Tech Stack**: Hono + TypeScript + Cloudflare Workers Runtime
-- **Last Updated**: October 6, 2025
+❌ **Enhanced Analytics**
+- Historical performance charts
+- Signal accuracy tracking
+- Backtesting functionality
 
-### 🔄 Next Steps for Production
-1. **Cloudflare Pages Deployment**: Ready for production deployment
-2. **Custom Domain**: Can be configured with Cloudflare
-3. **Environment Variables**: API keys management via Wrangler secrets
-4. **D1 Database**: Optional trade history persistence
+❌ **Production Deployment**
+- Cloudflare Pages deployment with environment variables
+- API key security management
+- Production-ready error handling
 
-## 🎯 User Guide
+## 📝 User Guide
 
 ### Getting Started
-1. **Visit the Website**: Open the live demo URL
-2. **Configure API**: Enter your Unusual Whales API key (or use demo mode)
-3. **Initialize**: Click "Initialize" to start the algorithm
-4. **Generate Signals**: Use "Generate Signal" for single analysis
-5. **Auto Mode**: Use "Start Auto" for continuous signal generation
+1. **Access the Website**: Visit the development URL above
+2. **Enter API Key**: Input your Unusual Whales API key in the configuration panel
+3. **Select Symbol**: Choose a stock symbol (default: SPY)
+4. **Initialize**: Click "Initialize" to start the algorithm
 
-### Understanding Signals
-- **LONG**: Bullish signal - consider buying
-- **SHORT**: Bearish signal - consider selling
-- **FLAT**: Neutral - no clear direction
-- **Confidence**: Higher percentages indicate stronger conviction
-- **Reasons**: Detailed explanations for each signal
+### Using the Algorithm
+1. **Generate Signal**: Click "Generate Signal" for manual signal creation
+2. **View Results**: See direction, confidence, strength, and reasoning
+3. **Simulate Trade**: Execute simulated trades based on signals
+4. **Monitor Data**: Watch real-time unusual whales alerts and market data
 
-### Mock Data Mode
-- Works without API key for demonstration
-- Generates realistic sample data
-- All features fully functional
-- Perfect for testing and evaluation
+### Auto Mode
+1. **Start Auto**: Click "Start Auto" for continuous signal generation
+2. **Monitor Status**: Watch the status indicator for algorithm state
+3. **Stop When Needed**: Click "Stop" to halt automatic generation
 
-## 🔑 Configuration
+## 🚀 Deployment
+- **Platform**: Cloudflare Pages (configured)
+- **Status**: ✅ Active Development Server
+- **Tech Stack**: Hono + TypeScript + Tailwind CSS + PM2
+- **Last Updated**: 2025-10-06
 
-### API Keys Required
-- **Unusual Whales**: For live options flow data
-  - Endpoint: `https://api.unusualwhales.com/api`
-  - Required for: Options flow, GEX, dark pool data
+## 🔑 API Configuration
+The application uses the corrected Unusual Whales API endpoints:
+```javascript
+{
+  "base_url": "https://api.unusualwhales.com/api",
+  "endpoints": {
+    "options_flow": "/option-trades/flow-alerts",
+    "dark_pool": "/darkpool", 
+    "gex": "/gex"
+  }
+}
+```
 
-### Optional Integrations
-- **Alpaca**: For live trading (future enhancement)
-- **IEX Cloud**: For market data (future enhancement)
-- **WebSocket**: For real-time updates (future enhancement)
+## 🛠 Development Commands
+```bash
+# Build project
+npm run build
 
-## 🚧 Features Not Yet Implemented
-1. **Real Trading Integration**: Currently simulation only
-2. **Historical Backtesting**: Performance analysis over time
-3. **Advanced Charting**: Price and signal visualization
-4. **User Accounts**: Personalized settings and history
-5. **WebSocket Updates**: True real-time data streaming
-6. **Mobile App**: Native mobile experience
+# Start development server
+npm run dev:sandbox
 
-## 📝 Development Notes
+# Clean port and restart
+npm run clean-port && pm2 restart webapp
 
-### Architecture Decisions
-- **Cloudflare Workers**: Edge deployment for global performance
-- **Serverless**: No persistent infrastructure requirements
-- **API-First**: Clean separation of frontend and backend
-- **Mock Data**: Ensures functionality without API dependencies
+# View logs
+pm2 logs webapp --nostream
 
-### Code Quality
-- **TypeScript**: Full type safety throughout
-- **Error Handling**: Comprehensive error management
-- **Logging**: Detailed console logging for debugging
-- **Comments**: Well-documented code and algorithms
+# Check service status
+curl http://localhost:3000/health
+```
 
-## 🏆 Recommended Next Development Steps
+## ⚠️ Important Notes
+- **Demo Mode**: Uses mock data when API calls fail for continuous testing
+- **Educational Purpose**: For demonstration and educational use only, not financial advice
+- **API Keys**: Requires valid Unusual Whales API key for real data
+- **Security**: API keys processed server-side only, not stored in frontend
 
-### Priority 1 (High Impact)
-1. **Cloudflare D1 Integration**: Add trade history persistence
-2. **Advanced Charting**: Interactive price and signal charts
-3. **Real Trading**: Alpaca broker integration
-4. **WebSocket Updates**: True real-time data streaming
+## 🔮 Recommended Next Steps
+1. **Add Cloudflare D1 Database**: Implement persistent storage for signals and trades
+2. **Deploy to Production**: Set up Cloudflare Pages deployment with secrets management
+3. **Real Data Integration**: Connect to live market data feeds (Alpaca, IEX, etc.)
+4. **Enhanced Analytics**: Add charts, historical analysis, and performance tracking
+5. **User Management**: Implement user accounts and personalized settings
+6. **Mobile Optimization**: Enhance mobile responsiveness and PWA features
 
-### Priority 2 (Enhancement)
-1. **Backtesting Engine**: Historical performance analysis
-2. **Alert System**: Email/SMS notifications for signals
-3. **Portfolio Tracking**: P&L and position management
-4. **Mobile Optimization**: Enhanced mobile experience
+## 📈 Signal Generation Logic
+The QPPF algorithm uses multiple factors:
+- **Unusual Whales Sentiment**: Options flow sentiment analysis
+- **Large Trade Detection**: Premium threshold analysis ($50k+)
+- **Volume Analysis**: Market volume considerations
+- **Price Momentum**: Recent price movement trends
+- **Confidence Scoring**: Multi-factor confidence calculation
+- **Direction Analysis**: Long/Short/Flat signal generation
 
-### Priority 3 (Scale)
-1. **Multi-Asset Support**: Beyond SPY to other symbols
-2. **Custom Indicators**: User-defined technical indicators
-3. **Strategy Builder**: Visual strategy creation tools
-4. **Social Features**: Community signal sharing
-
-## 📊 Performance Metrics
-- **Response Time**: < 200ms for signal generation
-- **Uptime**: 99.9% availability target
-- **Data Accuracy**: Real-time feed from Unusual Whales
-- **Error Rate**: < 0.1% with comprehensive fallbacks
-
-## 🔒 Security & Compliance
-- **API Key Protection**: Secure server-side storage
-- **CORS Configuration**: Proper cross-origin handling
-- **Input Validation**: All user inputs validated
-- **Disclaimer**: Educational purposes only, not financial advice
-
----
-
-**Built with**: Hono + TypeScript + Cloudflare Workers + Unusual Whales API
-
-**For educational and demonstration purposes only. Not financial advice.**
+Built with ❤️ using Hono framework and Unusual Whales integration for advanced options flow analysis.
