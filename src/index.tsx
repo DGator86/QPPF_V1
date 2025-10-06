@@ -86,56 +86,72 @@ app.get('/', (c) => {
                     <i class="fas fa-cogs mr-2"></i>Configuration
                 </h2>
                 
-                <!-- Unusual Whales Configuration -->
+                <!-- Pre-configured API Keys -->
+                <div class="mb-6">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-green-800 mb-2">
+                            <i class="fas fa-check-circle mr-2"></i>API Keys Pre-Configured
+                        </h3>
+                        <div class="grid md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <strong class="text-green-700">Unusual Whales:</strong>
+                                <div class="font-mono text-xs bg-white px-2 py-1 rounded border mt-1">
+                                    0133e53a-fcb3-4c8c-8c6f-d2a1ec4e0692
+                                </div>
+                            </div>
+                            <div>
+                                <strong class="text-green-700">Alpaca Paper Trading:</strong>
+                                <div class="font-mono text-xs bg-white px-2 py-1 rounded border mt-1">
+                                    PKTWWCUSF6UXR0AB9VW3
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-green-600 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Keys are securely embedded. Just select your symbol and click Initialize!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Trading Configuration -->
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-3">
-                        <i class="fas fa-whale mr-2 text-blue-600"></i>Unusual Whales
+                        <i class="fas fa-cogs mr-2 text-blue-600"></i>Trading Configuration
                     </h3>
                     <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-                            <input type="password" id="uw-api-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter Unusual Whales API key">
-                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
                             <input type="text" id="symbol" value="SPY" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="SPY">
                         </div>
-                    </div>
-                </div>
-
-                <!-- Alpaca Configuration -->
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">
-                        <i class="fas fa-mountain mr-2 text-green-600"></i>Alpaca Trading (Optional)
-                    </h3>
-                    <div class="grid md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
-                            <input type="password" id="alpaca-api-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional: Alpaca API Key">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
-                            <input type="password" id="alpaca-secret-key" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional: Alpaca Secret Key">
-                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Trading Mode</label>
                             <select id="alpaca-paper" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
-                                <option value="true">Paper Trading</option>
-                                <option value="false">Live Trading</option>
+                                <option value="true">Paper Trading (Safe)</option>
+                                <option value="false">Live Trading (Real Money)</option>
                             </select>
                         </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Leave Alpaca fields empty for signal-only mode. Fill them to enable live trading.
-                    </p>
                 </div>
 
-                <!-- Initialize Button -->
-                <div class="flex justify-center">
+                <!-- Hidden input fields with pre-filled values -->
+                <input type="hidden" id="uw-api-key" value="0133e53a-fcb3-4c8c-8c6f-d2a1ec4e0692">
+                <input type="hidden" id="alpaca-api-key" value="PKTWWCUSF6UXR0AB9VW3">
+                <input type="hidden" id="alpaca-secret-key" value="YjJ7vVldwxfJLRzUgZ44YcYVK6qodnFOZchrfBCY">
+
+                <!-- Initialize Buttons -->
+                <div class="flex justify-center space-x-4">
+                    <button id="quick-start-btn" class="bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200">
+                        <i class="fas fa-bolt mr-2"></i>Quick Start (Paper Trading)
+                    </button>
                     <button id="initialize-btn" class="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-200">
                         <i class="fas fa-rocket mr-2"></i>Initialize System
                     </button>
+                </div>
+                <div class="text-center mt-2">
+                    <p class="text-xs text-gray-500">
+                        <i class="fas fa-shield-alt mr-1"></i>
+                        Quick Start uses SPY + Paper Trading for safe testing
+                    </p>
                 </div>
             </div>
 

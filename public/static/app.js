@@ -9,16 +9,34 @@ class QPPFSignalsApp {
         this.isRunning = false;
         this.apiBase = '/api';
         
+        // Pre-configured API keys (embedded for convenience)
+        this.preConfiguredKeys = {
+            unusualWhales: '0133e53a-fcb3-4c8c-8c6f-d2a1ec4e0692',
+            alpacaApiKey: 'PKTWWCUSF6UXR0AB9VW3',
+            alpacaSecret: 'YjJ7vVldwxfJLRzUgZ44YcYVK6qodnFOZchrfBCY'
+        };
+        
         this.initializeEventListeners();
+        this.populateFields();
         this.updateStatus();
         
         // Auto-refresh status every 10 seconds
         setInterval(() => this.updateStatus(), 10000);
     }
 
+    populateFields() {
+        // Pre-populate hidden fields with API keys
+        document.getElementById('uw-api-key').value = this.preConfiguredKeys.unusualWhales;
+        document.getElementById('alpaca-api-key').value = this.preConfiguredKeys.alpacaApiKey;
+        document.getElementById('alpaca-secret-key').value = this.preConfiguredKeys.alpacaSecret;
+        
+        console.log('API keys pre-configured and ready for use');
+    }
+
     initializeEventListeners() {
         // Configuration
         document.getElementById('initialize-btn').addEventListener('click', () => this.initializeAlgorithm());
+        document.getElementById('quick-start-btn').addEventListener('click', () => this.quickStart());
         
         // Trading controls - Signal generation
         document.getElementById('signal-btn').addEventListener('click', () => this.generateSignal());
@@ -33,6 +51,25 @@ class QPPFSignalsApp {
         
         // UI controls
         document.getElementById('refresh-btn').addEventListener('click', () => this.updateStatus());
+    }
+
+    async quickStart() {
+        // Set safe defaults for quick testing
+        document.getElementById('symbol').value = 'SPY';
+        document.getElementById('alpaca-paper').value = 'true';
+        
+        this.showLoading('🚀 Quick Starting QPPF with SPY Paper Trading...');
+        
+        // Initialize with safe paper trading settings
+        await this.initializeAlgorithm();
+        
+        // If successful, generate first signal automatically
+        if (this.isInitialized) {
+            setTimeout(() => {
+                this.showSuccess('🎯 Ready to trade! Generating first signal...');
+                setTimeout(() => this.generateSignal(), 1000);
+            }, 2000);
+        }
     }
 
     async apiCall(endpoint, options = {}) {
@@ -58,37 +95,25 @@ class QPPFSignalsApp {
     }
 
     async initializeAlgorithm() {
-        const uwApiKey = document.getElementById('uw-api-key').value.trim();
+        // Use pre-configured API keys
+        const uwApiKey = this.preConfiguredKeys.unusualWhales;
+        const alpacaApiKey = this.preConfiguredKeys.alpacaApiKey;
+        const alpacaSecretKey = this.preConfiguredKeys.alpacaSecret;
+        
         const symbol = document.getElementById('symbol').value.trim() || 'SPY';
-        const alpacaApiKey = document.getElementById('alpaca-api-key').value.trim();
-        const alpacaSecretKey = document.getElementById('alpaca-secret-key').value.trim();
         const alpacaPaper = document.getElementById('alpaca-paper').value === 'true';
 
-        if (!uwApiKey) {
-            this.showError('Please enter your Unusual Whales API key');
-            return;
-        }
+        // Always use Alpaca credentials since they're pre-configured
+        this.showLoading(`Initializing QPPF with ${alpacaPaper ? 'Paper' : 'Live'} Trading...`);
 
-        // Check if Alpaca credentials are provided
-        const hasAlpacaCredentials = alpacaApiKey && alpacaSecretKey;
-        
-        if (hasAlpacaCredentials) {
-            this.showLoading('Initializing algorithm with Alpaca integration...');
-        } else {
-            this.showLoading('Initializing algorithm (signal-only mode)...');
-        }
-
+        // Always include all credentials since they're pre-configured
         const initData = {
             unusualWhalesApiKey: uwApiKey,
+            alpacaApiKey: alpacaApiKey,
+            alpacaSecretKey: alpacaSecretKey,
+            alpacaPaper: alpacaPaper,
             symbol: symbol
         };
-
-        // Add Alpaca credentials if provided
-        if (hasAlpacaCredentials) {
-            initData.alpacaApiKey = alpacaApiKey;
-            initData.alpacaSecretKey = alpacaSecretKey;
-            initData.alpacaPaper = alpacaPaper;
-        }
 
         const result = await this.apiCall('/initialize', {
             method: 'POST',
@@ -100,17 +125,40 @@ class QPPFSignalsApp {
             this.alpacaEnabled = result.alpacaEnabled || false;
             
             if (this.alpacaEnabled) {
-                this.showSuccess(`Algorithm initialized for ${symbol} with Alpaca ${alpacaPaper ? 'Paper' : 'Live'} Trading`);
+                this.showSuccess(`🚀 QPPF Algorithm Ready! ${symbol} - Alpaca ${alpacaPaper ? 'Paper' : 'Live'} Trading Enabled`);
                 this.showAlpacaAccount();
                 this.loadAlpacaAccount();
             } else {
-                this.showSuccess(`Algorithm initialized for ${symbol} (Signal-only mode)`);
+                this.showSuccess(`🚀 QPPF Algorithm Ready! ${symbol} - Signal Generation Mode`);
             }
             
             this.updateControlsState();
             this.updateStatus();
         } else {
-            this.showError('Failed to initialize algorithm');
+            // If Alpaca fails, try initializing without it
+            if (result?.error && result.error.includes('Alpaca')) {
+                this.showWarning('Alpaca connection failed - retrying in signal-only mode...');
+                
+                // Retry without Alpaca credentials
+                const fallbackResult = await this.apiCall('/initialize', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        unusualWhalesApiKey: uwApiKey,
+                        symbol: symbol
+                    })
+                });
+                
+                if (fallbackResult && fallbackResult.success) {
+                    this.isInitialized = true;
+                    this.alpacaEnabled = false;
+                    this.showSuccess(`🚀 QPPF Ready! ${symbol} - Signal Generation Mode (Alpaca disabled)`);
+                    this.updateControlsState();
+                    this.updateStatus();
+                    return;
+                }
+            }
+            
+            this.showError(`Initialization failed: ${result?.error || 'Unknown error'}`);
         }
     }
 

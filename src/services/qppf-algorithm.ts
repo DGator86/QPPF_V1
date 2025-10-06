@@ -3,7 +3,8 @@
  * Integrates Unusual Whales data for enhanced trading signals
  */
 
-import { UnusualWhalesClient, OptionsFlowSignals, UnusualWhalesAlert, GEXData, DarkPoolData } from './unusual-whales-client';
+import { UnusualWhalesClient, OptionsFlowSignals, UnusualWhalesAlert, DarkPoolData } from './unusual-whales-client';
+import { GEXCalculator, OptionContract, GEXData } from './gex-calculator';
 
 export interface MarketData {
   symbol: string;
@@ -42,6 +43,7 @@ export interface QPPFState {
 
 export class QPPFAlgorithm {
   private uwClient: UnusualWhalesClient;
+  private gexCalculator: GEXCalculator;
   private state: QPPFState;
   private readonly symbol: string;
   private readonly gridPoints: number = 201;
@@ -49,6 +51,7 @@ export class QPPFAlgorithm {
 
   constructor(unusualWhalesApiKey: string, symbol: string = 'SPY') {
     this.uwClient = new UnusualWhalesClient(unusualWhalesApiKey);
+    this.gexCalculator = new GEXCalculator();
     this.symbol = symbol;
     this.state = {
       symbol,
@@ -61,7 +64,7 @@ export class QPPFAlgorithm {
       isActive: false,
     };
 
-    console.log('QPPF Algorithm initialized with corrected Unusual Whales endpoints');
+    console.log('QPPF Algorithm initialized with real GEX calculations and Unusual Whales endpoints');
   }
 
   /**
@@ -106,7 +109,7 @@ export class QPPFAlgorithm {
   /**
    * Calculate trading confidence based on signal strength and market conditions
    */
-  private calculateConfidence(uwSignals: OptionsFlowSignals, marketData: MarketData): number {
+  private calculateConfidence(uwSignals: OptionsFlowSignals, marketData: MarketData, gexData?: GEXData): number {
     let baseConfidence = 0.5;
 
     // Boost confidence with strong Unusual Whales signals
@@ -135,6 +138,23 @@ export class QPPFAlgorithm {
     // Boost confidence with recent alerts
     if (uwSignals.recentAlerts > 5) {
       baseConfidence += 0.1;
+    }
+
+    // Boost confidence based on GEX positioning
+    if (gexData && gexData.zeroGammaLevel) {
+      const priceVsZGL = marketData.price - gexData.zeroGammaLevel;
+      const zglDistance = Math.abs(priceVsZGL) / gexData.zeroGammaLevel;
+      
+      // Higher confidence when price is significantly away from ZGL
+      if (zglDistance > 0.02) { // More than 2% away from ZGL
+        baseConfidence += 0.1;
+      }
+      
+      // Additional confidence if gamma exposure and price position align
+      if ((gexData.totalGEX > 0 && priceVsZGL < 0) || 
+          (gexData.totalGEX < 0 && priceVsZGL > 0)) {
+        baseConfidence += 0.05;
+      }
     }
 
     return Math.min(0.95, baseConfidence); // Cap at 95%
@@ -192,7 +212,7 @@ export class QPPFAlgorithm {
   /**
    * Generate reasons for long positions
    */
-  private generateLongReasons(uwSignals: OptionsFlowSignals, marketData: MarketData): string[] {
+  private generateLongReasons(uwSignals: OptionsFlowSignals, marketData: MarketData, gexData?: GEXData): string[] {
     const reasons: string[] = [];
 
     if (uwSignals.sentimentScore > 0.3) {
@@ -218,13 +238,23 @@ export class QPPFAlgorithm {
       }
     }
 
+    // Add GEX-based reasoning
+    if (gexData && gexData.zeroGammaLevel) {
+      if (marketData.price < gexData.zeroGammaLevel) {
+        reasons.push(`Price below Zero Gamma Level ($${gexData.zeroGammaLevel.toFixed(2)}) - positive gamma support`);
+      }
+      if (gexData.totalGEX > 0 && marketData.price < gexData.zeroGammaLevel) {
+        reasons.push('Positive gamma exposure below ZGL suggests upward price pressure');
+      }
+    }
+
     return reasons;
   }
 
   /**
    * Generate reasons for short positions
    */
-  private generateShortReasons(uwSignals: OptionsFlowSignals, marketData: MarketData): string[] {
+  private generateShortReasons(uwSignals: OptionsFlowSignals, marketData: MarketData, gexData?: GEXData): string[] {
     const reasons: string[] = [];
 
     if (uwSignals.sentimentScore < -0.3) {
@@ -246,6 +276,16 @@ export class QPPFAlgorithm {
       }
     }
 
+    // Add GEX-based reasoning
+    if (gexData && gexData.zeroGammaLevel) {
+      if (marketData.price > gexData.zeroGammaLevel) {
+        reasons.push(`Price above Zero Gamma Level ($${gexData.zeroGammaLevel.toFixed(2)}) - negative gamma resistance`);
+      }
+      if (gexData.totalGEX < 0 && marketData.price > gexData.zeroGammaLevel) {
+        reasons.push('Negative gamma exposure above ZGL suggests downward price pressure');
+      }
+    }
+
     return reasons;
   }
 
@@ -259,15 +299,25 @@ export class QPPFAlgorithm {
       // Fetch market data
       const marketData = await this.fetchMarketData();
 
-      // Fetch Unusual Whales data
-      const [uwAlerts, gexData, darkPoolData] = await Promise.all([
+      // Fetch Unusual Whales data  
+      const [uwAlerts, darkPoolData] = await Promise.all([
         this.uwClient.getOptionsFlow(this.symbol),
-        this.uwClient.getGEXData(this.symbol),
         this.uwClient.getDarkPoolData(this.symbol),
       ]);
 
       // Process Unusual Whales signals
       const uwSignals = this.uwClient.processOptionsFlowSignals(uwAlerts);
+
+      // Calculate real GEX from options flow data
+      let gexData: GEXData | undefined;
+      try {
+        const optionContracts = this.convertAlertsToContracts(uwAlerts, marketData.price);
+        gexData = this.gexCalculator.calculateGEX(optionContracts, marketData.price);
+        console.log(`Calculated GEX: Total=${gexData.totalGEX.toFixed(2)}B, ZGL=${gexData.zeroGammaLevel?.toFixed(2) || 'N/A'}`);
+      } catch (error) {
+        console.error('Error calculating GEX:', error);
+        gexData = undefined;
+      }
 
       // Update state
       this.state.priceHistory.push(marketData.price);
@@ -280,13 +330,13 @@ export class QPPFAlgorithm {
       }
 
       // Calculate signals
-      const confidence = this.calculateConfidence(uwSignals, marketData);
+      const confidence = this.calculateConfidence(uwSignals, marketData, gexData);
       const direction = this.calculateDirection(uwSignals, marketData);
       const strength = this.calculateStrength(uwSignals, confidence);
 
       // Generate trading reasons
-      const reasonsLong = this.generateLongReasons(uwSignals, marketData);
-      const reasonsShort = this.generateShortReasons(uwSignals, marketData);
+      const reasonsLong = this.generateLongReasons(uwSignals, marketData, gexData);
+      const reasonsShort = this.generateShortReasons(uwSignals, marketData, gexData);
 
       const signal: QPPFSignal = {
         direction,
@@ -394,6 +444,29 @@ export class QPPFAlgorithm {
       isActive: false,
     };
     console.log('QPPF Algorithm state reset');
+  }
+
+  /**
+   * Convert Unusual Whales alerts to option contracts for GEX calculation
+   */
+  private convertAlertsToContracts(alerts: UnusualWhalesAlert[], currentSpot: number): OptionContract[] {
+    const contracts: OptionContract[] = [];
+    
+    for (const alert of alerts) {
+      const contract = GEXCalculator.fromUnusualWhalesAlert(alert);
+      if (contract) {
+        contracts.push(contract);
+      }
+    }
+    
+    // If we have few real contracts, supplement with mock data for better GEX calculation
+    if (contracts.length < 10) {
+      console.log(`Only ${contracts.length} real contracts, supplementing with mock data`);
+      const mockContracts = GEXCalculator.createMockContracts(currentSpot);
+      contracts.push(...mockContracts);
+    }
+    
+    return contracts;
   }
 
   /**

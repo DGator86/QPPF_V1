@@ -27,13 +27,7 @@ export interface DarkPoolData {
   avgPrice: number;
 }
 
-export interface GEXData {
-  gex: number;
-  dex: number;
-  totalGamma: number;
-  symbol: string;
-  timestamp: string;
-}
+// GEXData interface moved to gex-calculator.ts
 
 export interface OptionsFlowSignals {
   sentimentScore: number;
@@ -54,12 +48,13 @@ export class UnusualWhalesClient {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.baseUrl = 'https://api.unusualwhales.com/api';
+    this.baseUrl = 'https://api.unusualwhales.com';
   }
 
   private getHeaders(): Record<string, string> {
     return {
       'Authorization': `Bearer ${this.apiKey}`,
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
   }
@@ -85,7 +80,7 @@ export class UnusualWhalesClient {
 
       console.log(`Fetching options flow for ${symbol} from ${params.get('start')} to ${params.get('end')}`);
 
-      const response = await fetch(`${this.baseUrl}/option-trades/flow-alerts?${params}`, {
+      const response = await fetch(`${this.baseUrl}/api/option-trades/flow-alerts?${params}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -93,10 +88,15 @@ export class UnusualWhalesClient {
       console.log(`Response status: ${response.status}`);
 
       if (response.ok) {
-        const data = await response.json();
-        console.log(`Received ${data.length} flow alerts`);
+        const result = await response.json();
+        
+        // Handle both direct array and {data: array} response formats
+        const data = result.data || result;
+        
+        if (Array.isArray(data)) {
+          console.log(`Received ${data.length} flow alerts`);
 
-        return data.map((alertData: any): UnusualWhalesAlert => ({
+          return data.map((alertData: any): UnusualWhalesAlert => ({
           symbol: alertData.symbol || '',
           alertType: alertData.trade_type || alertData.alert_type || '',
           strike: Number(alertData.strike_price || alertData.strike || 0),
@@ -110,8 +110,13 @@ export class UnusualWhalesClient {
             : new Date(),
           sentiment: this.inferSentiment(alertData),
         }));
+        } else {
+          console.log('Options flow data is not an array, using mock data');
+          return this.mockOptionsFlow();
+        }
       } else {
-        console.log(`Unusual Whales API error (${response.status}): ${await response.text()}`);
+        const errorText = await response.text();
+        console.log(`Unusual Whales API error (${response.status}): ${errorText}`);
         return this.mockOptionsFlow();
       }
     } catch (error) {
@@ -122,15 +127,17 @@ export class UnusualWhalesClient {
 
   /**
    * Fetch dark pool trading data
-   * Uses the corrected endpoint: /darkpool
+   * Uses the corrected endpoint from OpenAPI: /api/darkpool/{ticker}
    */
   async getDarkPoolData(symbol: string = 'SPY'): Promise<DarkPoolData> {
     try {
-      const params = new URLSearchParams({ symbol });
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const params = new URLSearchParams({ date: dateStr });
 
-      console.log(`Fetching dark pool data for ${symbol}`);
+      console.log(`Fetching dark pool data for ${symbol} on ${dateStr}`);
 
-      const response = await fetch(`${this.baseUrl}/darkpool?${params}`, {
+      const response = await fetch(`${this.baseUrl}/api/darkpool/${symbol}?${params}`, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -138,9 +145,36 @@ export class UnusualWhalesClient {
       console.log(`Dark pool response status: ${response.status}`);
 
       if (response.ok) {
-        const data = await response.json();
-        console.log(`Received dark pool data: ${data.trades?.length || 0} trades`);
-        return data;
+        const result = await response.json();
+        
+        // Handle both direct array and {data: array} response formats
+        const trades = result.data || result;
+        
+        if (Array.isArray(trades)) {
+          console.log(`Received dark pool data: ${trades.length} trades`);
+          
+          // Convert to our expected format
+          const processedTrades = trades.map(trade => ({
+            symbol: trade.ticker || trade.symbol || symbol,
+            size: trade.size || 0,
+            price: parseFloat(trade.price || '0'),
+            timestamp: trade.executed_at || trade.timestamp || new Date().toISOString(),
+          }));
+          
+          const totalVolume = processedTrades.reduce((sum, trade) => sum + trade.size, 0);
+          const avgPrice = totalVolume > 0 
+            ? processedTrades.reduce((sum, trade) => sum + (trade.price * trade.size), 0) / totalVolume
+            : 0;
+          
+          return {
+            trades: processedTrades,
+            totalVolume,
+            avgPrice,
+          };
+        } else {
+          console.log('Dark pool data is not an array, using mock data');
+          return this.mockDarkPool();
+        }
       } else {
         console.log(`Dark pool API error (${response.status}): ${await response.text()}`);
         return this.mockDarkPool();
@@ -153,33 +187,53 @@ export class UnusualWhalesClient {
 
   /**
    * Fetch Gamma Exposure (GEX) data
-   * Uses the corrected endpoint: /gex
+   * Tries multiple potential endpoints for GEX data
    */
   async getGEXData(symbol: string = 'SPY'): Promise<GEXData> {
-    try {
-      const params = new URLSearchParams({ symbol });
+    const endpoints = [
+      `/api/gex/${symbol}`,
+      `/api/gamma/${symbol}`,
+      `/gex?symbol=${symbol}`,
+      `/api/market/gex?symbol=${symbol}`
+    ];
 
-      console.log(`Fetching GEX data for ${symbol}`);
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying GEX endpoint: ${endpoint}`);
 
-      const response = await fetch(`${this.baseUrl}/gex?${params}`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
 
-      console.log(`GEX response status: ${response.status}`);
+        console.log(`GEX response status for ${endpoint}: ${response.status}`);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`Received GEX data:`, data);
-        return data;
-      } else {
-        console.log(`GEX API error (${response.status}): ${await response.text()}`);
-        return this.mockGEX();
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Handle different response formats
+          const data = result.data || result;
+          
+          if (data && (data.gex !== undefined || data.gamma !== undefined)) {
+            console.log(`Received GEX data from ${endpoint}:`, data);
+            
+            return {
+              gex: parseFloat(data.gex || data.gamma || '0'),
+              dex: parseFloat(data.dex || data.delta_exposure || '0'), 
+              totalGamma: parseFloat(data.total_gamma || data.totalGamma || data.gex || '0'),
+              symbol: data.symbol || symbol,
+              timestamp: data.timestamp || new Date().toISOString(),
+            };
+          }
+        }
+      } catch (error) {
+        console.log(`Error with GEX endpoint ${endpoint}:`, error.message);
+        continue;
       }
-    } catch (error) {
-      console.error('Error fetching GEX data:', error);
-      return this.mockGEX();
     }
+    
+    console.log('All GEX endpoints failed, using mock data');
+    return this.mockGEX();
   }
 
   /**
