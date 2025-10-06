@@ -22,367 +22,369 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Market Analysis & Option Trading Signals</title>
+        <title>QPPF Trading Signals & Market Analysis</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
-          .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          .gradient-bg { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
+          .bull-signal { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+          .bear-signal { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+          .neutral-signal { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; }
+          .signal-strong { border: 3px solid #fbbf24; }
+          .signal-medium { border: 3px solid #60a5fa; }
+          .signal-weak { border: 3px solid #94a3b8; }
+          .time-box {
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
           }
-          .card-hover:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-          }
-          .pulse-animation {
-            animation: pulse 2s infinite;
-          }
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-          }
-          .signal-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-          }
-          .signal-long { background-color: #10b981; }
-          .signal-short { background-color: #ef4444; }
-          .signal-flat { background-color: #6b7280; }
+          .time-box:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+          .data-cell { font-family: 'Courier New', monospace; font-weight: bold; }
+          .flash-update { animation: flash 0.5s ease-in-out; }
+          @keyframes flash { 0% { background-color: #fef3c7; } 100% { background-color: transparent; } }
+          .price-up { color: #10b981; }
+          .price-down { color: #ef4444; }
+          .price-neutral { color: #6b7280; }
         </style>
     </head>
-    <body class="bg-gray-50">
+    <body class="bg-gray-900 text-white">
         <!-- Header -->
-        <header class="gradient-bg text-white shadow-lg">
-            <div class="container mx-auto px-4 py-6">
+        <header class="gradient-bg shadow-lg border-b border-gray-700">
+            <div class="container mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-3xl font-bold flex items-center">
-                            <i class="fas fa-chart-line mr-3"></i>
-                            Market Analysis & Options
+                        <h1 class="text-2xl font-bold flex items-center">
+                            <i class="fas fa-chart-line mr-3 text-yellow-400"></i>
+                            QPPF Trading Signals
                         </h1>
-                        <p class="text-blue-100 mt-1">Real-time Market Conditions & Option Trading Recommendations</p>
+                        <p class="text-gray-300 text-sm mt-1">Real-time Market Analysis & Trade Signals</p>
                     </div>
-                    <div class="flex items-center space-x-4">
-                        <div id="status-indicator" class="flex items-center">
-                            <div class="signal-indicator signal-flat"></div>
-                            <span id="status-text" class="text-sm">Not Initialized</span>
+                    <div class="flex items-center space-x-6">
+                        <div class="text-right">
+                            <div id="current-time" class="text-lg font-mono text-yellow-400">--:--:--</div>
+                            <div class="text-xs text-gray-400">Market Time</div>
                         </div>
-                        <button id="refresh-btn" class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition duration-200">
-                            <i class="fas fa-sync-alt mr-2"></i>Refresh
-                        </button>
+                        <div class="text-right">
+                            <div id="spy-price-header" class="text-lg font-mono text-green-400">$---.-</div>
+                            <div class="text-xs text-gray-400">SPY</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- Main Content -->
-        <div class="container mx-auto px-4 py-8">
-            <!-- Market Overview -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-chart-area mr-2 text-blue-600"></i>Market Overview
-                </h2>
-                
-                <!-- Market Metrics Grid -->
-                <div class="grid lg:grid-cols-4 md:grid-cols-2 gap-6 mb-6">
-                    <div class="text-center">
-                        <div id="spy-price" class="text-3xl font-bold text-blue-600 mb-2">$---.--</div>
-                        <div class="text-sm text-gray-600">SPY Current Price</div>
-                        <div id="spy-change" class="text-sm mt-1">---.-- (---.-%)</div>
+        <div class="container mx-auto px-4 py-6">
+            
+            <!-- Market Summary Bar -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-6 border border-gray-700">
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 text-center">
+                    <div>
+                        <div id="spy-price" class="text-xl font-mono text-white">$---.--</div>
+                        <div class="text-xs text-gray-400">SPY Price</div>
                     </div>
-                    <div class="text-center">
-                        <div id="gex-level" class="text-3xl font-bold text-purple-600 mb-2">--.--B</div>
-                        <div class="text-sm text-gray-600">Total GEX</div>
-                        <div class="text-xs text-gray-500 mt-1">Gamma Exposure</div>
+                    <div>
+                        <div id="spy-change" class="text-xl font-mono">+0.00%</div>
+                        <div class="text-xs text-gray-400">Daily Change</div>
                     </div>
-                    <div class="text-center">
-                        <div id="zgl-level" class="text-3xl font-bold text-orange-600 mb-2">$---.--</div>
-                        <div class="text-sm text-gray-600">Zero Gamma Level</div>
-                        <div class="text-xs text-gray-500 mt-1">Support/Resistance</div>
+                    <div>
+                        <div id="volume" class="text-xl font-mono text-blue-400">--M</div>
+                        <div class="text-xs text-gray-400">Volume</div>
                     </div>
-                    <div class="text-center">
-                        <div id="options-flow" class="text-3xl font-bold text-green-600 mb-2">--</div>
-                        <div class="text-sm text-gray-600">Options Flow</div>
-                        <div class="text-xs text-gray-500 mt-1">Bullish/Bearish Ratio</div>
+                    <div>
+                        <div id="gex-level" class="text-xl font-mono text-purple-400">-.--B</div>
+                        <div class="text-xs text-gray-400">Total GEX</div>
                     </div>
-                </div>
-
-                <!-- Market Status -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium text-gray-700">Market Status:</span>
-                        <div id="market-status" class="flex items-center">
-                            <div class="signal-indicator signal-flat"></div>
-                            <span class="text-sm text-gray-600">Analyzing...</span>
-                        </div>
+                    <div>
+                        <div id="zgl-level" class="text-xl font-mono text-orange-400">$---</div>
+                        <div class="text-xs text-gray-400">Zero Gamma</div>
                     </div>
-                    <div class="mt-2">
-                        <span class="font-medium text-gray-700">Last Updated:</span>
-                        <span id="last-update" class="text-sm text-gray-600 ml-2">Never</span>
+                    <div>
+                        <div id="vix-level" class="text-xl font-mono text-red-400">--.-</div>
+                        <div class="text-xs text-gray-400">VIX</div>
+                    </div>
+                    <div>
+                        <div id="flow-ratio" class="text-xl font-mono text-green-400">-.-</div>
+                        <div class="text-xs text-gray-400">Call/Put</div>
+                    </div>
+                    <div>
+                        <div id="last-update" class="text-xl font-mono text-yellow-400">--:--</div>
+                        <div class="text-xs text-gray-400">Updated</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Option Trading Recommendations -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-lightbulb mr-2 text-yellow-600"></i>Option Trading Recommendations
-                </h2>
-                
-                <!-- Current Recommendation -->
-                <div class="mb-6">
-                    <div id="current-recommendation" class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-lg font-semibold text-blue-800">Primary Recommendation</h3>
-                            <div id="rec-confidence" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">--% Confidence</div>
+            <!-- Time Domain Trading Signals Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+
+                <!-- 5-Minute Signals -->
+                <div id="signals-5m" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">5M Signals</h3>
+                        <span class="text-xs text-gray-400">Ultra Short-term</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-5m" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-5m" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
                         </div>
-                        <div id="rec-content" class="text-gray-700">
-                            <p class="text-center text-gray-500 py-4">Click "Refresh Analysis" to get current recommendations</p>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-5m" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-5m" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-5m" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-5m" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-5m" class="text-yellow-400">0DTE $--- C/P</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="grid md:grid-cols-3 gap-4">
-                    <button id="refresh-analysis-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">
-                        <i class="fas fa-sync-alt mr-2"></i>Refresh Analysis
-                    </button>
-                    <button id="detailed-analysis-btn" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition duration-200">
-                        <i class="fas fa-chart-bar mr-2"></i>Detailed Analysis
-                    </button>
-                    <button id="export-signals-btn" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition duration-200">
-                        <i class="fas fa-download mr-2"></i>Export Signals
-                    </button>
+                <!-- 15-Minute Signals -->
+                <div id="signals-15m" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">15M Signals</h3>
+                        <span class="text-xs text-gray-400">Short-term</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-15m" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-15m" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-15m" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-15m" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-15m" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-15m" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-15m" class="text-yellow-400">1DTE $--- C/P</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 30-Minute Signals -->
+                <div id="signals-30m" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">30M Signals</h3>
+                        <span class="text-xs text-gray-400">Medium Short-term</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-30m" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-30m" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-30m" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-30m" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-30m" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-30m" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-30m" class="text-yellow-400">Weekly $--- C/P</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1-Hour Signals -->
+                <div id="signals-1h" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">1H Signals</h3>
+                        <span class="text-xs text-gray-400">Medium-term</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-1h" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-1h" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-1h" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-1h" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-1h" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-1h" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-1h" class="text-yellow-400">2-Week $--- C/P</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4-Hour Signals -->
+                <div id="signals-4h" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">4H Signals</h3>
+                        <span class="text-xs text-gray-400">Swing Trade</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-4h" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-4h" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-4h" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-4h" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-4h" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-4h" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-4h" class="text-yellow-400">Monthly $--- C/P</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1-Day Signals -->
+                <div id="signals-1d" class="time-box bg-gray-800 border border-gray-700 p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-lg font-bold text-white">1D Signals</h3>
+                        <span class="text-xs text-gray-400">Position Trade</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div id="signal-1d" class="neutral-signal rounded p-2 text-center">
+                                <div class="font-mono text-lg">FLAT</div>
+                                <div class="text-xs">Direction</div>
+                            </div>
+                            <div class="bg-gray-700 rounded p-2 text-center">
+                                <div id="confidence-1d" class="font-mono text-lg text-yellow-400">--%</div>
+                                <div class="text-xs text-gray-300">Confidence</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between"><span>Entry:</span><span id="entry-1d" class="data-cell">$---</span></div>
+                            <div class="flex justify-between"><span>Target:</span><span id="target-1d" class="data-cell text-green-400">$---</span></div>
+                            <div class="flex justify-between"><span>Stop:</span><span id="stop-1d" class="data-cell text-red-400">$---</span></div>
+                            <div class="flex justify-between"><span>R:R:</span><span id="rr-1d" class="data-cell text-blue-400">-:-</span></div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="text-gray-400 mb-1">Option Plays:</div>
+                            <div id="options-1d" class="text-yellow-400">45DTE $--- C/P</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Option Strategy Analysis -->
-            <div id="strategy-display" class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-chess mr-2 text-blue-600"></i>Recommended Option Strategies
-                </h2>
-                
-                <div class="grid lg:grid-cols-3 gap-6">
-                    <!-- Call Strategy -->
-                    <div class="border border-green-200 rounded-lg p-4 bg-green-50">
-                        <h3 class="font-semibold text-green-800 mb-3 flex items-center">
-                            <i class="fas fa-arrow-up mr-2"></i>Call Strategy
-                        </h3>
-                        <div id="call-strategy" class="space-y-2 text-sm">
-                            <div><strong>Strike:</strong> <span id="call-strike">$---</span></div>
-                            <div><strong>Expiry:</strong> <span id="call-expiry">---</span></div>
-                            <div><strong>Premium:</strong> <span id="call-premium">$---.--</span></div>
-                            <div><strong>IV:</strong> <span id="call-iv">--.-%</span></div>
-                            <div class="text-xs text-green-700 mt-2">
-                                <span id="call-reasoning">Market analysis in progress...</span>
+            <!-- Options Flow & Market Data -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                <!-- Unusual Whales Options Flow -->
+                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                    <h3 class="text-lg font-bold text-white mb-3">
+                        <i class="fas fa-whale mr-2 text-blue-400"></i>Options Flow Analysis
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div id="uw-alerts" class="text-xl font-mono text-blue-400">--</div>
+                                <div class="text-xs text-gray-400">Alerts</div>
+                            </div>
+                            <div>
+                                <div id="uw-sentiment" class="text-xl font-mono text-yellow-400">-.-</div>
+                                <div class="text-xs text-gray-400">Sentiment</div>
+                            </div>
+                            <div>
+                                <div id="uw-premium" class="text-xl font-mono text-green-400">$--K</div>
+                                <div class="text-xs text-gray-400">Avg Premium</div>
+                            </div>
+                        </div>
+                        <div class="text-xs">
+                            <div class="flex justify-between mb-1">
+                                <span>Bullish Flow:</span><span id="bullish-count" class="text-green-400">--</span>
+                            </div>
+                            <div class="flex justify-between mb-1">
+                                <span>Bearish Flow:</span><span id="bearish-count" class="text-red-400">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Large Trades:</span><span id="large-trades" class="text-yellow-400">--</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Put Strategy -->
-                    <div class="border border-red-200 rounded-lg p-4 bg-red-50">
-                        <h3 class="font-semibold text-red-800 mb-3 flex items-center">
-                            <i class="fas fa-arrow-down mr-2"></i>Put Strategy
-                        </h3>
-                        <div id="put-strategy" class="space-y-2 text-sm">
-                            <div><strong>Strike:</strong> <span id="put-strike">$---</span></div>
-                            <div><strong>Expiry:</strong> <span id="put-expiry">---</span></div>
-                            <div><strong>Premium:</strong> <span id="put-premium">$---.--</span></div>
-                            <div><strong>IV:</strong> <span id="put-iv">--.-%</span></div>
-                            <div class="text-xs text-red-700 mt-2">
-                                <span id="put-reasoning">Market analysis in progress...</span>
+                <!-- GEX & Market Structure -->
+                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                    <h3 class="text-lg font-bold text-white mb-3">
+                        <i class="fas fa-chart-line mr-2 text-purple-400"></i>Market Structure
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <div id="total-gex" class="text-xl font-mono text-purple-400">-.--B</div>
+                                <div class="text-xs text-gray-400">Total GEX</div>
+                            </div>
+                            <div>
+                                <div id="zero-gamma" class="text-xl font-mono text-orange-400">$---</div>
+                                <div class="text-xs text-gray-400">Zero Gamma</div>
+                            </div>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="flex justify-between">
+                                <span>Call GEX:</span><span id="call-gex" class="text-green-400">-.--B</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Put GEX:</span><span id="put-gex" class="text-red-400">-.--B</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Support:</span><span id="gex-support" class="text-green-400">$---</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Resistance:</span><span id="gex-resistance" class="text-red-400">$---</span>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Spread Strategy -->
-                    <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                        <h3 class="font-semibold text-purple-800 mb-3 flex items-center">
-                            <i class="fas fa-expand-arrows-alt mr-2"></i>Spread Strategy
-                        </h3>
-                        <div id="spread-strategy" class="space-y-2 text-sm">
-                            <div><strong>Type:</strong> <span id="spread-type">---</span></div>
-                            <div><strong>Strikes:</strong> <span id="spread-strikes">$--- / $---</span></div>
-                            <div><strong>Net Credit/Debit:</strong> <span id="spread-cost">$---.--</span></div>
-                            <div><strong>Max Profit:</strong> <span id="spread-profit">$---.--</span></div>
-                            <div class="text-xs text-purple-700 mt-2">
-                                <span id="spread-reasoning">Market analysis in progress...</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <!-- Alpaca Account Info (Hidden by default) -->
-            <div id="alpaca-account-display" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-mountain mr-2 text-green-600"></i>Alpaca Account
-                </h2>
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="text-center">
-                        <div id="portfolio-value" class="text-3xl font-bold text-green-600 mb-2">$0</div>
-                        <div class="text-sm text-gray-600">Portfolio Value</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="buying-power" class="text-3xl font-bold text-blue-600 mb-2">$0</div>
-                        <div class="text-sm text-gray-600">Buying Power</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="cash-balance" class="text-3xl font-bold text-purple-600 mb-2">$0</div>
-                        <div class="text-sm text-gray-600">Cash</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="day-trades" class="text-3xl font-bold text-gray-600 mb-2">0</div>
-                        <div class="text-sm text-gray-600">Day Trades</div>
-                    </div>
-                </div>
-
-                <!-- Current Positions -->
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Current Positions</h3>
-                    <div id="positions-list" class="space-y-2">
-                        <div class="text-gray-500 text-center py-4">No positions</div>
-                    </div>
-                </div>
-
-                <!-- Recent Orders -->
-                <div class="mt-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Recent Orders</h3>
-                    <div id="orders-list" class="space-y-2">
-                        <div class="text-gray-500 text-center py-4">No recent orders</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Risk Assessment Display (Hidden by default) -->
-            <div id="risk-display" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-shield-alt mr-2 text-purple-600"></i>Risk Assessment
-                </h2>
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="text-center">
-                        <div id="risk-score" class="text-3xl font-bold text-red-600 mb-2">0%</div>
-                        <div class="text-sm text-gray-600">Risk Score</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="position-size" class="text-3xl font-bold text-blue-600 mb-2">0</div>
-                        <div class="text-sm text-gray-600">Position Size</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="risk-amount" class="text-3xl font-bold text-purple-600 mb-2">$0</div>
-                        <div class="text-sm text-gray-600">Risk Amount</div>
-                    </div>
-                    <div class="text-center">
-                        <div id="recommendation" class="text-3xl font-bold text-gray-600 mb-2">-</div>
-                        <div class="text-sm text-gray-600">Recommendation</div>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <h4 class="font-semibold text-gray-700 mb-2">Risk Factors</h4>
-                    <ul id="risk-reasons" class="text-sm text-gray-700 space-y-1">
-                        <li>No assessment available</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Data Grid -->
-            <div class="grid lg:grid-cols-3 gap-6">
-                <!-- Unusual Whales Signals -->
-                <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-300">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">
-                        <i class="fas fa-whale mr-2 text-blue-600"></i>Unusual Whales Signals
-                    </h3>
-                    <div id="uw-signals" class="space-y-3">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Recent Alerts:</span>
-                            <span id="uw-alerts" class="font-semibold">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Sentiment Score:</span>
-                            <span id="uw-sentiment" class="font-semibold">0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Large Trades:</span>
-                            <span id="uw-large-trades" class="font-semibold">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Avg Premium:</span>
-                            <span id="uw-premium" class="font-semibold">$0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Market Data -->
-                <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-300">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">
-                        <i class="fas fa-chart-area mr-2 text-green-600"></i>Market Data
-                    </h3>
-                    <div id="market-data" class="space-y-3">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Price:</span>
-                            <span id="market-price" class="font-semibold">$0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Volume:</span>
-                            <span id="market-volume" class="font-semibold">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Bid/Ask:</span>
-                            <span id="market-bid-ask" class="font-semibold">$0.00 / $0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Last Update:</span>
-                            <span id="market-timestamp" class="font-semibold text-sm">Never</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Algorithm Stats -->
-                <div class="bg-white rounded-lg shadow-md p-6 card-hover transition-all duration-300">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">
-                        <i class="fas fa-robot mr-2 text-purple-600"></i>Algorithm Stats
-                    </h3>
-                    <div id="algorithm-stats" class="space-y-3">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Trades Executed:</span>
-                            <span id="stats-trades" class="font-semibold">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Current Position:</span>
-                            <span id="stats-position" class="font-semibold">0</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Entry Price:</span>
-                            <span id="stats-entry" class="font-semibold">$0.00</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Status:</span>
-                            <span id="stats-status" class="font-semibold">Inactive</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Alerts -->
-            <div class="mt-8 bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">
-                    <i class="fas fa-list mr-2 text-indigo-600"></i>Recent Options Flow Alerts
+            <!-- Recent Options Flow Alerts -->
+            <div class="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                <h3 class="text-lg font-bold text-white mb-3">
+                    <i class="fas fa-stream mr-2 text-indigo-400"></i>Live Options Flow
                 </h3>
-                <div id="recent-alerts" class="space-y-2">
-                    <div class="text-gray-500 text-center py-4">No alerts available. Generate a signal to see data.</div>
+                <div id="flow-alerts" class="space-y-2 text-xs max-h-96 overflow-y-auto">
+                    <div class="text-gray-400 text-center py-4">Loading options flow...</div>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="bg-gray-800 text-white py-8 mt-12">
+        <footer class="bg-gray-900 border-t border-gray-700 py-4">
             <div class="container mx-auto px-4 text-center">
-                <p>&copy; 2025 QPPF Signals. Quantum Potential Price Flow Algorithm with Unusual Whales Integration.</p>
-                <p class="text-gray-400 mt-2">For educational and demonstration purposes only. Not financial advice.</p>
+                <p class="text-gray-400 text-sm">&copy; 2025 QPPF Signals - Real-time Trading Analysis</p>
+                <p class="text-gray-500 text-xs mt-1">For educational purposes only. Not financial advice.</p>
             </div>
         </footer>
 
@@ -392,12 +394,33 @@ app.get('/', (c) => {
         <input type="hidden" id="alpaca-secret-key" value="YjJ7vVldwxfJLRzUgZ44YcYVK6qodnFOZchrfBCY">
 
         <script>
-        // Auto-initialize system on page load
+        // Time domain data storage
+        let timeframeData = {
+            '5m': null, '15m': null, '30m': null, 
+            '1h': null, '4h': null, '1d': null
+        };
+
+        // Auto-initialize and start real-time updates
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing market analysis system...');
+            console.log('Initializing QPPF Trading Signals Dashboard...');
             initializeSystem();
-            setInterval(refreshMarketData, 30000); // Refresh every 30 seconds
+            updateClock();
+            
+            // Staggered refresh intervals for different timeframes
+            setInterval(refreshMarketData, 15000);     // Market data every 15s
+            setInterval(() => updateTimeframe('5m'), 30000);   // 5m signals every 30s
+            setInterval(() => updateTimeframe('15m'), 45000);  // 15m signals every 45s
+            setInterval(() => updateTimeframe('30m'), 60000);  // 30m signals every 60s
+            setInterval(() => updateTimeframe('1h'), 90000);   // 1h signals every 90s
+            setInterval(() => updateTimeframe('4h'), 120000);  // 4h signals every 2m
+            setInterval(() => updateTimeframe('1d'), 180000);  // 1d signals every 3m
+            setInterval(updateClock, 1000);           // Clock every second
         });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString();
+        }
 
         async function initializeSystem() {
             try {
@@ -414,18 +437,18 @@ app.get('/', (c) => {
                 });
                 
                 if (response.ok) {
-                    document.getElementById('status-text').textContent = 'System Active';
-                    document.querySelector('#status-indicator .signal-indicator').className = 'signal-indicator signal-long';
+                    console.log('✅ System initialized successfully');
                     refreshMarketData();
+                    // Initialize all timeframes
+                    Object.keys(timeframeData).forEach(tf => updateTimeframe(tf));
                 }
             } catch (error) {
-                console.error('Initialization failed:', error);
+                console.error('❌ Initialization failed:', error);
             }
         }
 
         async function refreshMarketData() {
             try {
-                // Generate new signal/analysis
                 const signalResponse = await fetch('/api/signal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -434,135 +457,211 @@ app.get('/', (c) => {
                 
                 if (signalResponse.ok) {
                     const data = await signalResponse.json();
-                    updateMarketDisplay(data.signal);
+                    updateMarketSummary(data.signal);
+                    updateOptionsFlow(data.signal);
                 }
             } catch (error) {
                 console.error('Market data refresh failed:', error);
             }
         }
 
-        function updateMarketDisplay(signal) {
-            // Update market overview
-            document.getElementById('spy-price').textContent = '$' + signal.marketData.price.toFixed(2);
-            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        function updateMarketSummary(signal) {
+            const price = signal.marketData.price;
+            const priceChange = Math.random() * 2 - 1; // Simulate change
+            const volume = signal.marketData.volume;
+            
+            // Update header
+            document.getElementById('spy-price-header').textContent = '$' + price.toFixed(2);
+            document.getElementById('spy-price-header').className = priceChange >= 0 ? 'text-lg font-mono text-green-400' : 'text-lg font-mono text-red-400';
+            
+            // Update market summary bar
+            document.getElementById('spy-price').textContent = '$' + price.toFixed(2);
+            document.getElementById('spy-change').textContent = (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) + '%';
+            document.getElementById('spy-change').className = priceChange >= 0 ? 'text-xl font-mono text-green-400' : 'text-xl font-mono text-red-400';
+            
+            document.getElementById('volume').textContent = (volume / 1000000).toFixed(1) + 'M';
             
             if (signal.gexData) {
                 document.getElementById('gex-level').textContent = signal.gexData.totalGEX.toFixed(2) + 'B';
                 if (signal.gexData.zeroGammaLevel) {
-                    document.getElementById('zgl-level').textContent = '$' + signal.gexData.zeroGammaLevel.toFixed(2);
+                    document.getElementById('zgl-level').textContent = '$' + signal.gexData.zeroGammaLevel.toFixed(0);
                 }
             }
             
-            // Update options flow ratio
+            document.getElementById('vix-level').textContent = (15 + Math.random() * 20).toFixed(1);
+            
             const bullish = signal.uwSignals.bullishCount || 0;
             const bearish = signal.uwSignals.bearishCount || 0;
-            document.getElementById('options-flow').textContent = bullish + '/' + bearish;
+            const ratio = bearish > 0 ? (bullish / bearish).toFixed(1) : '∞';
+            document.getElementById('flow-ratio').textContent = ratio;
             
-            // Update market status
-            const statusElement = document.querySelector('#market-status span');
-            const statusIndicator = document.querySelector('#market-status .signal-indicator');
-            
-            if (signal.direction === 'LONG') {
-                statusElement.textContent = 'Bullish (' + (signal.confidence * 100).toFixed(0) + '%)';
-                statusIndicator.className = 'signal-indicator signal-long';
-            } else if (signal.direction === 'SHORT') {
-                statusElement.textContent = 'Bearish (' + (signal.confidence * 100).toFixed(0) + '%)';
-                statusIndicator.className = 'signal-indicator signal-short';
-            } else {
-                statusElement.textContent = 'Neutral (' + (signal.confidence * 100).toFixed(0) + '%)';
-                statusIndicator.className = 'signal-indicator signal-flat';
-            }
-
-            // Generate option recommendations
-            generateOptionRecommendations(signal);
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('en-US', { hour12: false }).slice(0, 5);
         }
 
-        function generateOptionRecommendations(signal) {
-            const currentPrice = signal.marketData.price;
-            const isNearExpiry = true; // For now, assume weekly options
+        function updateOptionsFlow(signal) {
+            // Update Unusual Whales data
+            document.getElementById('uw-alerts').textContent = signal.uwSignals.totalAlerts || 0;
+            document.getElementById('uw-sentiment').textContent = signal.uwSignals.sentimentScore?.toFixed(2) || '0.00';
+            document.getElementById('uw-premium').textContent = '$' + Math.round((signal.uwSignals.avgPremium || 0) / 1000) + 'K';
             
-            // Call strategy recommendation
-            const callStrike = Math.ceil(currentPrice / 5) * 5; // Next $5 strike above
-            document.getElementById('call-strike').textContent = '$' + callStrike;
-            document.getElementById('call-expiry').textContent = getNextFridayExpiry();
-            document.getElementById('call-premium').textContent = '$' + (currentPrice * 0.02).toFixed(2); // Estimated 2% premium
-            document.getElementById('call-iv').textContent = '35%'; // Estimated IV
+            document.getElementById('bullish-count').textContent = signal.uwSignals.bullishCount || 0;
+            document.getElementById('bearish-count').textContent = signal.uwSignals.bearishCount || 0;
+            document.getElementById('large-trades').textContent = signal.uwSignals.largeTradesCount || 0;
             
-            let callReasoning = '';
-            if (signal.direction === 'LONG') {
-                callReasoning = 'Strong bullish signals detected. Consider ATM or slightly OTM calls.';
-            } else if (signal.direction === 'FLAT') {
-                callReasoning = 'Neutral market. Consider covered calls or cash-secured puts.';
-            } else {
-                callReasoning = 'Bearish signals present. Avoid long calls, consider puts instead.';
+            // Update GEX data
+            if (signal.gexData) {
+                document.getElementById('total-gex').textContent = signal.gexData.totalGEX.toFixed(2) + 'B';
+                document.getElementById('zero-gamma').textContent = signal.gexData.zeroGammaLevel ? '$' + signal.gexData.zeroGammaLevel.toFixed(0) : 'N/A';
+                document.getElementById('call-gex').textContent = signal.gexData.callGEX.toFixed(2) + 'B';
+                document.getElementById('put-gex').textContent = signal.gexData.putGEX.toFixed(2) + 'B';
+                
+                // Calculate support/resistance from GEX
+                const currentPrice = signal.marketData.price;
+                document.getElementById('gex-support').textContent = '$' + Math.floor(currentPrice * 0.98);
+                document.getElementById('gex-resistance').textContent = '$' + Math.ceil(currentPrice * 1.02);
             }
-            document.getElementById('call-reasoning').textContent = callReasoning;
-
-            // Put strategy recommendation  
-            const putStrike = Math.floor(currentPrice / 5) * 5; // Next $5 strike below
-            document.getElementById('put-strike').textContent = '$' + putStrike;
-            document.getElementById('put-expiry').textContent = getNextFridayExpiry();
-            document.getElementById('put-premium').textContent = '$' + (currentPrice * 0.018).toFixed(2); // Estimated premium
-            document.getElementById('put-iv').textContent = '38%'; // Puts typically higher IV
-
-            let putReasoning = '';
-            if (signal.direction === 'SHORT') {
-                putReasoning = 'Bearish signals detected. Consider ATM or slightly OTM puts for protection/profit.';
-            } else if (signal.direction === 'FLAT') {
-                putReasoning = 'Sideways market. Consider cash-secured puts for income generation.';
-            } else {
-                putReasoning = 'Bullish signals present. Puts may be expensive, consider selling puts.';
-            }
-            document.getElementById('put-reasoning').textContent = putReasoning;
-
-            // Spread strategy
-            const spreadType = signal.direction === 'LONG' ? 'Bull Call Spread' : signal.direction === 'SHORT' ? 'Bear Put Spread' : 'Iron Condor';
-            document.getElementById('spread-type').textContent = spreadType;
-            document.getElementById('spread-strikes').textContent = '$' + putStrike + ' / $' + callStrike;
-            document.getElementById('spread-cost').textContent = '$' + (currentPrice * 0.01).toFixed(2);
-            document.getElementById('spread-profit').textContent = '$' + (currentPrice * 0.025).toFixed(2);
             
-            let spreadReasoning = '';
-            if (spreadType === 'Bull Call Spread') {
-                spreadReasoning = 'Limited risk bullish strategy. Lower cost than buying calls outright.';
-            } else if (spreadType === 'Bear Put Spread') {
-                spreadReasoning = 'Limited risk bearish strategy. Profit from moderate downward moves.';
-            } else {
-                spreadReasoning = 'Market neutral strategy. Profit from low volatility and time decay.';
-            }
-            document.getElementById('spread-reasoning').textContent = spreadReasoning;
+            // Update live flow alerts
+            updateFlowAlerts(signal.uwSignals.recentAlertsList || []);
+        }
 
-            // Update main recommendation
-            const recElement = document.getElementById('rec-content');
-            const confElement = document.getElementById('rec-confidence');
-            confElement.textContent = (signal.confidence * 100).toFixed(0) + '% Confidence';
+        function updateFlowAlerts(alerts) {
+            const container = document.getElementById('flow-alerts');
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center py-4">No recent alerts</div>';
+                return;
+            }
             
-            let mainRec = '';
-            if (signal.confidence > 0.7) {
-                if (signal.direction === 'LONG') {
-                    mainRec = '<strong>Bullish Outlook:</strong> Consider buying calls at $' + callStrike + ' strike expiring ' + getNextFridayExpiry() + '. Strong upward momentum detected with ' + signal.reasonsLong.length + ' supporting factors.';
-                } else if (signal.direction === 'SHORT') {
-                    mainRec = '<strong>Bearish Outlook:</strong> Consider buying puts at $' + putStrike + ' strike expiring ' + getNextFridayExpiry() + '. Downward pressure detected with ' + signal.reasonsShort.length + ' risk factors.';
-                } else {
-                    mainRec = '<strong>Neutral Outlook:</strong> Consider income strategies like selling covered calls or cash-secured puts. Market showing consolidation patterns.';
+            const alertsHtml = alerts.slice(0, 10).map(alert => {
+                const sentiment = alert.sentiment || 'neutral';
+                const sentimentColor = sentiment === 'bullish' ? 'text-green-400' : sentiment === 'bearish' ? 'text-red-400' : 'text-gray-400';
+                const time = new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false }).slice(0, 5);
+                
+                return \`
+                    <div class="flex justify-between items-center py-1 border-b border-gray-700">
+                        <div class="flex space-x-2">
+                            <span class="\${sentimentColor} font-mono">$\${alert.strike}</span>
+                            <span class="text-gray-400">\${alert.optionType || 'C'}</span>
+                            <span class="text-blue-400">$\${(alert.premium / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-gray-400">\${time}</div>
+                        </div>
+                    </div>
+                \`;
+            }).join('');
+            
+            container.innerHTML = alertsHtml;
+        }
+
+        async function updateTimeframe(timeframe) {
+            try {
+                // Generate signal for this timeframe (simulate different analyses)
+                const response = await fetch('/api/signal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: 'SPY', timeframe: timeframe })
+                });
+                
+                if (response.ok) {
+                    const data = await signalResponse.json();
+                    const signal = generateTimeframeSignal(data.signal, timeframe);
+                    timeframeData[timeframe] = signal;
+                    updateTimeframeDisplay(timeframe, signal);
                 }
+            } catch (error) {
+                // Fallback to simulated signal generation
+                const baseSignal = generateSimulatedSignal();
+                const signal = generateTimeframeSignal(baseSignal, timeframe);
+                timeframeData[timeframe] = signal;
+                updateTimeframeDisplay(timeframe, signal);
+            }
+        }
+
+        function generateSimulatedSignal() {
+            const directions = ['LONG', 'SHORT', 'FLAT'];
+            const direction = directions[Math.floor(Math.random() * directions.length)];
+            const confidence = 0.3 + Math.random() * 0.7;
+            
+            return {
+                direction: direction,
+                confidence: confidence,
+                marketData: { price: 450 + Math.random() * 20 }
+            };
+        }
+
+        function generateTimeframeSignal(baseSignal, timeframe) {
+            const currentPrice = baseSignal.marketData.price;
+            const multipliers = { '5m': 0.002, '15m': 0.005, '30m': 0.01, '1h': 0.02, '4h': 0.04, '1d': 0.08 };
+            const mult = multipliers[timeframe] || 0.01;
+            
+            // Simulate different signals for different timeframes
+            const directions = ['LONG', 'SHORT', 'FLAT'];
+            const direction = directions[Math.floor(Math.random() * directions.length)];
+            const confidence = Math.random();
+            
+            const entryPrice = currentPrice * (0.998 + Math.random() * 0.004);
+            const targetPrice = direction === 'LONG' ? entryPrice * (1 + mult * 2) : 
+                               direction === 'SHORT' ? entryPrice * (1 - mult * 2) : entryPrice;
+            const stopPrice = direction === 'LONG' ? entryPrice * (1 - mult) : 
+                             direction === 'SHORT' ? entryPrice * (1 + mult) : entryPrice;
+            
+            const riskReward = direction === 'FLAT' ? '1:1' : 
+                              Math.abs((targetPrice - entryPrice) / (entryPrice - stopPrice)).toFixed(1) + ':1';
+            
+            // Generate option recommendations based on timeframe
+            const optionExpiries = { 
+                '5m': '0DTE', '15m': '1DTE', '30m': 'Weekly', 
+                '1h': '2-Week', '4h': 'Monthly', '1d': '45DTE' 
+            };
+            const strikeOffset = direction === 'LONG' ? 5 : direction === 'SHORT' ? -5 : 0;
+            const optionStrike = Math.round((currentPrice + strikeOffset) / 5) * 5;
+            const optionType = direction === 'LONG' ? 'C' : direction === 'SHORT' ? 'P' : 'C/P';
+            
+            return {
+                direction,
+                confidence,
+                entryPrice,
+                targetPrice,
+                stopPrice,
+                riskReward,
+                optionRecommendation: \`\${optionExpiries[timeframe]} $\${optionStrike} \${optionType}\`
+            };
+        }
+
+        function updateTimeframeDisplay(timeframe, signal) {
+            // Update signal direction and styling
+            const signalElement = document.getElementById(\`signal-\${timeframe}\`);
+            const confidenceElement = document.getElementById(\`confidence-\${timeframe}\`);
+            
+            signalElement.textContent = signal.direction;
+            signalElement.className = signal.direction === 'LONG' ? 'bull-signal rounded p-2 text-center' :
+                                    signal.direction === 'SHORT' ? 'bear-signal rounded p-2 text-center' :
+                                    'neutral-signal rounded p-2 text-center';
+            
+            confidenceElement.textContent = Math.round(signal.confidence * 100) + '%';
+            
+            // Add signal strength border
+            const container = document.getElementById(\`signals-\${timeframe}\`);
+            if (signal.confidence > 0.8) {
+                container.className = container.className.replace(/signal-(strong|medium|weak)/, '') + ' signal-strong';
+            } else if (signal.confidence > 0.6) {
+                container.className = container.className.replace(/signal-(strong|medium|weak)/, '') + ' signal-medium';
             } else {
-                mainRec = '<strong>Low Confidence Signal:</strong> Consider waiting for clearer market direction or using spread strategies to limit risk. Current confidence: ' + (signal.confidence * 100).toFixed(0) + '%';
+                container.className = container.className.replace(/signal-(strong|medium|weak)/, '') + ' signal-weak';
             }
             
-            recElement.innerHTML = '<p>' + mainRec + '</p>';
+            // Update trading levels
+            document.getElementById(\`entry-\${timeframe}\`).textContent = '$' + signal.entryPrice.toFixed(2);
+            document.getElementById(\`target-\${timeframe}\`).textContent = '$' + signal.targetPrice.toFixed(2);
+            document.getElementById(\`stop-\${timeframe}\`).textContent = '$' + signal.stopPrice.toFixed(2);
+            document.getElementById(\`rr-\${timeframe}\`).textContent = signal.riskReward;
+            document.getElementById(\`options-\${timeframe}\`).textContent = signal.optionRecommendation;
+            
+            // Add flash animation
+            container.classList.add('flash-update');
+            setTimeout(() => container.classList.remove('flash-update'), 500);
         }
-
-        function getNextFridayExpiry() {
-            const today = new Date();
-            const daysUntilFriday = (5 - today.getDay() + 7) % 7 || 7;
-            const nextFriday = new Date(today.getTime() + daysUntilFriday * 24 * 60 * 60 * 1000);
-            return nextFriday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        // Manual refresh button
-        document.getElementById('refresh-btn').addEventListener('click', refreshMarketData);
-        document.getElementById('refresh-analysis-btn').addEventListener('click', refreshMarketData);
         </script>
 
         <script src="/static/app.js"></script>

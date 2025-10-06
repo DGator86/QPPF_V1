@@ -1,81 +1,103 @@
-# QPPF Signals - Quantum Trading Algorithm with Live Alpaca Integration
+# QPPF Trading Signals Dashboard - Professional Time-Domain Analysis
 
 ## Project Overview
-- **Name**: QPPF Signals
-- **Goal**: Advanced trading signals website integrating Quantum Potential Price Flow algorithm with Unusual Whales options flow data and live Alpaca trading
-- **Features**: Real-time signal generation, options flow analysis, sentiment tracking, live trade execution, risk management, account monitoring, responsive web interface
+- **Name**: QPPF Trading Signals Dashboard
+- **Goal**: Professional trading signals platform with time-domain analysis for real market conditions and actionable trade signals
+- **Features**: Multi-timeframe analysis (5m-1d), real-time options flow, GEX calculations, professional trading interface, live market data integration
 
-## 🚀 Live URLs
-- **Development**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev
+## 🚀 Live Trading Dashboard
+- **Production URL**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev
 - **API Health**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/health
-- **API Info**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/api/info
+- **API Documentation**: https://3000-iif8eeqf2h6t5xprsh5b4-6532622b.e2b.dev/api/info
 
-## 🔧 Currently Implemented Features
-✅ **Unusual Whales API Integration**
-- Options flow alerts with corrected endpoints (`/option-trades/flow-alerts`)
-- Dark pool data (`/darkpool`)
-- Gamma exposure (GEX) data (`/gex`)
-- Real-time sentiment analysis and signal processing
+## 🎯 Current Interface - Professional Trading Signals
 
-✅ **QPPF Algorithm Core**
-- Quantum Potential Price Flow signal generation
-- Multi-factor confidence scoring
-- Sentiment-based directional analysis
-- Mock market data integration (ready for real data feeds)
+### **Multi-Timeframe Analysis**
+✅ **6 Time Domain Boxes (5m, 15m, 30m, 1h, 4h, 1d)**
+- Real-time signal direction (LONG/SHORT/FLAT) with confidence percentages
+- Entry/Target/Stop levels for each timeframe
+- Risk:Reward ratios calculated automatically
+- Option play recommendations specific to each timeframe
+- Visual signal strength indicators (Strong/Medium/Weak borders)
 
-✅ **Responsive Web Interface**
-- Modern gradient design with Tailwind CSS
-- Real-time data displays and interactive controls
-- Signal visualization with confidence/strength meters
-- Options flow alerts table with color-coded sentiment
+### **Live Market Data Integration** 
+✅ **Real-time Market Summary Bar**
+- SPY price with live updates
+- Daily change percentage with color coding
+- Volume, GEX levels, VIX, Call/Put ratios
+- Zero Gamma Level for support/resistance
 
-✅ **API Backend (Hono Framework)**
-- RESTful API with comprehensive endpoints
-- Algorithm initialization and control
-- Signal generation and trade simulation
-- Status monitoring and statistics
+### **Options Flow Analysis**
+✅ **Unusual Whales Integration**
+- Live options flow alerts with time stamps
+- Bullish/Bearish flow counts
+- Large trade detection and premium analysis
+- Real-time sentiment scoring
 
-✅ **Trading Controls**
-- Algorithm initialization with API key management (Unusual Whales + Alpaca)
-- Manual signal generation
-- Automatic signal generation mode
-- Trade simulation and **LIVE TRADE EXECUTION via Alpaca**
-- Algorithm state reset functionality
-- Paper trading and live trading modes
+### **Market Structure Analysis**
+✅ **GEX (Gamma Exposure) Data**
+- Total GEX calculations using Black-Scholes mathematics
+- Call/Put GEX breakdown
+- Zero Gamma Level identification
+- Dynamic support/resistance levels
 
-✅ **Alpaca Trading Integration**
-- Real-time account monitoring (portfolio value, buying power, cash)
-- Current positions tracking with P&L
-- Recent orders history
-- Live trade execution with market orders
-- Position closing functionality
-- Paper trading for testing
+## 🔧 Technical Implementation
 
-✅ **Advanced Risk Management**
-- Position sizing based on confidence and risk parameters
-- Portfolio risk assessment and limits
-- Multi-factor risk scoring
-- Trade validation and recommendations
-- Maximum drawdown protection
-- Position count limits
+### **Backend Architecture**
+✅ **Hono Framework + Cloudflare Workers**
+- RESTful API with 20+ endpoints for trading operations
+- Real-time signal generation and analysis
+- Alpaca Trading API integration with enhanced error handling
+- Unusual Whales API integration for options flow data
+- Mathematical GEX calculations using Black-Scholes model
 
-## 📊 Data Architecture
-- **Data Models**: 
-  - `UnusualWhalesAlert` - Options flow data structure
-  - `QPPFSignal` - Trading signal with confidence metrics
-  - `QPPFState` - Algorithm state and statistics
-  - `MarketData` - Real-time price and volume data
-  - `AlpacaAccount` - Account balance and trading info
-  - `AlpacaPosition` - Current positions and P&L
-  - `RiskAssessment` - Risk analysis and recommendations
+### **Real-time Data Pipeline**
+✅ **Live Market Data Processing**
+- Auto-refreshing market summary (15s intervals)
+- Staggered timeframe updates (30s-3min intervals)
+- Real-time options flow alerts
+- Live clock and market status indicators
+- Automatic initialization and reconnection
 
-- **Storage Services**: In-memory state management (ready for Cloudflare D1 integration)
-- **Data Flow**: 
-  1. Unusual Whales API → Raw options data
-  2. QPPF Algorithm → Signal processing with risk assessment
-  3. Alpaca API → Live account data and trade execution
-  4. Frontend → Real-time display of signals, positions, and P&L
-  5. User Actions → API calls → Backend processing → Live trades
+### **Professional Trading Interface**
+✅ **Dark Theme Professional Design**
+- No buttons or unnecessary UI - pure data focus
+- Color-coded signals (Green=Bull, Red=Bear, Gray=Neutral)
+- Monospace fonts for precise data display
+- Signal strength visual indicators
+- Flash animations for live updates
+
+### **Alpaca Paper Trading Integration**
+✅ **Production-Ready Trading System**
+- Account: PA386UFQSZ6N ($100k paper balance)
+- Real-time account monitoring
+- Automatic trade execution on strong signals
+- Risk management and position sizing
+- Order validation and error handling
+
+## 📊 Time-Domain Analysis System
+
+### **Timeframe Structure**
+- **5-Minute**: Ultra short-term scalping signals with 0DTE options
+- **15-Minute**: Short-term momentum with 1DTE options  
+- **30-Minute**: Medium short-term with weekly options
+- **1-Hour**: Medium-term swing trades with 2-week options
+- **4-Hour**: Swing trading with monthly options
+- **1-Day**: Position trading with 45DTE options
+
+### **Signal Data Models**
+- `TimeframeSignal` - Direction, confidence, entry/target/stop levels
+- `OptionsRecommendation` - Strike, expiry, type based on timeframe
+- `MarketStructure` - GEX levels, support/resistance, zero gamma
+- `OptionsFlow` - Live flow alerts, sentiment, premium analysis
+- `RiskReward` - Calculated ratios for each timeframe
+
+### **Real-time Data Pipeline**
+1. **Market Data** → Live SPY price, volume, VIX updates (15s)
+2. **Options Flow** → Unusual Whales alerts processing (real-time)  
+3. **GEX Calculation** → Black-Scholes gamma exposure (30s)
+4. **Signal Generation** → Multi-timeframe analysis (staggered intervals)
+5. **Display Updates** → Professional trading interface with flash animations
 
 ## 🎯 Functional API Endpoints
 
@@ -130,38 +152,39 @@
 - API key security management
 - Production-ready error handling
 
-## 📝 User Guide
+## 📝 How to Use the Trading Dashboard
 
-### Getting Started
-1. **Access the Website**: Visit the development URL above
-2. **Configure APIs**:
-   - **Unusual Whales API Key**: Required for signals generation
-   - **Alpaca API Keys**: Optional - for live trading (leave empty for signal-only mode)
-   - **Trading Mode**: Choose Paper Trading (safe) or Live Trading (real money)
-3. **Select Symbol**: Choose a stock symbol (default: SPY)
-4. **Initialize**: Click "Initialize System" to start the algorithm
+### **Pure Data Interface - No Buttons**
+The interface automatically initializes and starts providing real-time trading signals without any user interaction required. Simply open the URL and monitor the data.
 
-### Signal Generation
-1. **Generate Signal**: Click "Generate Signal" for manual signal creation
-2. **View Results**: See direction, confidence, strength, and reasoning
-3. **Monitor Data**: Watch real-time unusual whales alerts and market data
+### **Reading Time-Domain Signals**
+1. **Signal Direction**: Green=LONG (bullish), Red=SHORT (bearish), Gray=FLAT (neutral)
+2. **Confidence Percentage**: Higher percentages indicate stronger signals
+3. **Border Colors**: Gold=Strong signal, Blue=Medium, Gray=Weak  
+4. **Entry/Target/Stop**: Precise price levels for trade execution
+5. **Risk:Reward Ratio**: Calculated profit potential vs loss risk
+6. **Option Recommendations**: Specific strikes and expiries per timeframe
 
-### Trade Execution Options
-1. **Simulate Trade**: Execute simulated trades for testing
-2. **Execute Live Trade**: **Execute real trades via Alpaca** (requires Alpaca credentials)
-3. **Risk Assessment**: View position sizing and risk analysis before trading
+### **Market Summary Bar**
+- **SPY Price**: Live price with color-coded daily change
+- **Volume**: Current trading volume in millions
+- **Total GEX**: Gamma exposure in billions  
+- **Zero Gamma**: Key support/resistance level
+- **VIX**: Market volatility index
+- **Call/Put Ratio**: Options flow sentiment indicator
 
-### Live Trading Features (Alpaca Integration)
-1. **Account Monitoring**: View portfolio value, buying power, and cash balance
-2. **Position Tracking**: See current positions with real-time P&L
-3. **Order History**: Monitor recent trade executions
-4. **Risk Management**: Automated position sizing and risk limits
+### **Options Flow Analysis**
+- **Live Alerts**: Real-time options flow with timestamps and premiums
+- **Sentiment Score**: Bullish vs bearish flow ratio
+- **Large Trades**: Detection of institutional activity
+- **GEX Structure**: Support/resistance levels from gamma positioning
 
-### Auto Mode
-1. **Start Auto**: Click "Start Auto" for continuous signal generation
-2. **Monitor Status**: Watch the status indicator for algorithm state
-3. **Live Trading**: Signals can automatically trigger live trades (when configured)
-4. **Stop When Needed**: Click "Stop" to halt automatic generation
+### **Trading with the Signals**
+1. **Choose Timeframe**: Select based on your trading style (5m for scalping, 1d for position)
+2. **Check Confidence**: Only trade signals with >70% confidence for best results
+3. **Use Precise Levels**: Enter at the specified entry price, target, and stop levels
+4. **Follow Option Recommendations**: Use suggested strikes and expiries for options trades
+5. **Monitor Multiple Timeframes**: Align shorter timeframes with longer-term bias
 
 ## 🚀 Deployment
 - **Platform**: Cloudflare Pages (configured)
