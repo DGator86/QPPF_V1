@@ -1,0 +1,68 @@
+{
+  "name": "qppf-alpaca-algorithm",
+  "version": "2.0.0",
+  "description": "QPPF Algorithmic Trading System for Alpaca - Real GEX calculations with Unusual Whales integration",
+  "main": "src/services/qppf-algorithm.ts",
+  "scripts": {
+    "start": "node dist/algorithm.js",
+    "start-algo": "node dist/services/qppf-algorithm.js",
+    "start-paper": "ALPACA_PAPER=true node dist/algorithm.js",
+    "start-live": "ALPACA_PAPER=false node dist/algorithm.js",
+    "build": "vite build",
+    "test-signal": "curl -X POST http://localhost:3000/api/signal -H 'Content-Type: application/json' -d '{\"symbol\":\"SPY\"}'",
+    "test-account": "curl http://localhost:3000/api/alpaca/account",
+    "test-positions": "curl http://localhost:3000/api/alpaca/positions",
+    "risk-assessment": "curl http://localhost:3000/api/risk-assessment",
+    "monitor": "pm2 logs qppf-algo --nostream",
+    "stop": "pm2 stop qppf-algo",
+    "restart": "pm2 restart qppf-algo"
+  },
+  "keywords": [
+    "algorithmic-trading",
+    "alpaca-api",
+    "options-trading",
+    "gamma-exposure",
+    "unusual-whales",
+    "qppf-algorithm",
+    "black-scholes",
+    "trading-bot",
+    "market-analysis",
+    "risk-management"
+  ],
+  "dependencies": {
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20250705.0",
+    "@hono/vite-cloudflare-pages": "^0.4.2",
+    "vite": "^5.0.0",
+    "wrangler": "^3.78.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DGator86/alpaca-trading.git"
+  },
+  "author": "QPPF Development Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DGator86/alpaca-trading/issues"
+  },
+  "homepage": "https://github.com/DGator86/alpaca-trading#readme",
+  "trading": {
+    "supportedBrokers": ["Alpaca"],
+    "supportedAssets": ["US Equities", "ETFs", "Options"],
+    "riskManagement": true,
+    "paperTrading": true,
+    "liveTrading": true,
+    "algorithmsIncluded": [
+      "QPPF (Quantum Potential Price Flow)",
+      "GEX (Gamma Exposure) Calculator", 
+      "Risk Management System",
+      "Unusual Whales Integration"
+    ]
+  }
+}
