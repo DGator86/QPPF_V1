@@ -7,7 +7,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { QPPFAlgorithm, QPPFSignal, QPPFState } from '../services/qppf-algorithm';
 import { UnusualWhalesClient } from '../services/unusual-whales-client';
-import { AlpacaTradingService, AlpacaCredentials, TradeSignal } from '../services/alpaca-trading-service';
+import { AlpacaTradingService, AlpacaCredentials, TradeSignal } from '../services/alpaca-trading-service-enhanced';
 import { RiskManager } from '../services/risk-manager';
 
 // Global instances (in production, use proper state management)
@@ -53,7 +53,7 @@ api.post('/initialize', async (c) => {
     // Initialize Alpaca service if credentials provided
     if (config.alpacaApiKey && config.alpacaSecretKey) {
       const alpacaCredentials: AlpacaCredentials = {
-        apiKey: config.alpacaApiKey,
+        apiKeyId: config.alpacaApiKey,
         secretKey: config.alpacaSecretKey,
         paper: config.alpacaPaper ?? true, // Default to paper trading
       };

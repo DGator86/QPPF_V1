@@ -1,6 +1,7 @@
 /**
- * Alpaca Trading Service
- * Integrates with Alpaca API for live trade execution
+ * Alpaca Trading Service - Enhanced for Production
+ * Fully compliant with Alpaca Trading API best practices
+ * Includes proper authentication, error handling, and X-Request-ID tracking
  */
 
 export interface AlpacaCredentials {
