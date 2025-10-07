@@ -905,6 +905,150 @@ export class QPPFStockScanner {
   }
 
   /**
+   * Scan market and automatically execute trades on best opportunities
+   */
+  async scanAndTrade(
+    alpacaService: any, 
+    riskManager: any, 
+    maxTrades: number = 3,
+    minConfidence: number = 0.75
+  ): Promise<{
+    scanResults: ScanResults;
+    tradesExecuted: any[];
+    tradingReport: string;
+  }> {
+    console.log('🚀 Starting market scan with auto-trading...');
+    
+    // First, run the full market scan
+    const scanResults = await this.scanMarket();
+    
+    // Get the best opportunities (both BUY and SELL)
+    const allOpportunities = [
+      ...scanResults.buyOpportunities,
+      ...scanResults.sellOpportunities
+    ].sort((a, b) => b.confidence - a.confidence); // Sort by confidence
+    
+    // Filter opportunities that meet our trading criteria
+    const tradableOpportunities = allOpportunities.filter(opp => 
+      opp.confidence >= minConfidence && 
+      opp.qppfScore >= this.scanConfig.qppfThreshold &&
+      opp.riskReward >= 1.5 // Minimum 1.5:1 risk/reward ratio
+    );
+    
+    console.log(`📊 Found ${tradableOpportunities.length} tradable opportunities from ${scanResults.scanMetrics.totalOpportunities} scanned`);
+    
+    const tradesExecuted: any[] = [];
+    let tradingReport = `QPPF Auto-Trading Report\n========================\n`;
+    tradingReport += `Market Regime: ${scanResults.marketRegime}\n`;
+    tradingReport += `Total Opportunities: ${scanResults.scanMetrics.totalOpportunities}\n`;
+    tradingReport += `Tradable (${(minConfidence*100).toFixed(0)}%+ confidence): ${tradableOpportunities.length}\n\n`;
+    
+    // Execute trades on the best opportunities (up to maxTrades)
+    const topOpportunities = tradableOpportunities.slice(0, maxTrades);
+    
+    for (const opportunity of topOpportunities) {
+      try {
+        console.log(`💰 Attempting trade: ${opportunity.signal} ${opportunity.symbol} @ $${opportunity.currentPrice.toFixed(2)} (${(opportunity.confidence*100).toFixed(1)}% confidence)`);
+        
+        // Get current account info and positions
+        const account = await alpacaService.getAccount();
+        const positions = await alpacaService.getPositions();
+        
+        if (!account) {
+          console.log(`❌ Could not get account info for ${opportunity.symbol} trade`);
+          continue;
+        }
+        
+        // Create mock QPPF signal for risk assessment (using existing interface)
+        const mockSignal = {
+          direction: opportunity.signal === 'BUY' ? 'LONG' : 'SHORT',
+          confidence: opportunity.confidence,
+          strength: opportunity.qppfScore,
+          sentiment: opportunity.analysis,
+          reasonsLong: opportunity.signal === 'BUY' ? [opportunity.analysis] : [],
+          reasonsShort: opportunity.signal === 'SELL' ? [opportunity.analysis] : [],
+          marketData: {
+            symbol: opportunity.symbol,
+            price: opportunity.currentPrice,
+            volume: 1000000, // Default volume
+            bid: opportunity.currentPrice - 0.01,
+            ask: opportunity.currentPrice + 0.01,
+            timestamp: new Date()
+          },
+          uwSignals: { sentimentScore: 0, totalAlerts: 0, recentAlerts: 0, bullishCount: 0, bearishCount: 0, avgPremium: 0, largeTradesCount: 0, hasUnusualFlow: false, dominantSentiment: 'neutral' as const, recentAlertsList: [] },
+          timestamp: new Date()
+        };
+        
+        // Assess risk for this trade
+        const riskAssessment = riskManager.assessTrade(
+          mockSignal,
+          mockSignal.uwSignals,
+          account,
+          positions,
+          opportunity.currentPrice
+        );
+        
+        // Check if we should execute
+        if (!riskManager.shouldExecuteTrade(riskAssessment)) {
+          console.log(`⚠️ Risk manager rejected ${opportunity.symbol}: ${riskAssessment.reasons.join(', ')}`);
+          tradingReport += `REJECTED: ${opportunity.symbol} - ${riskAssessment.reasons.join(', ')}\n`;
+          continue;
+        }
+        
+        // Create trade signal for Alpaca
+        const tradeSignal = {
+          symbol: opportunity.symbol,
+          direction: opportunity.signal === 'BUY' ? 'long' : 'short',
+          quantity: riskAssessment.positionSize,
+          confidence: opportunity.confidence,
+          orderType: 'market' as const
+        };
+        
+        // Execute the trade
+        const tradeResult = await alpacaService.executeTrade(tradeSignal);
+        
+        if (tradeResult.success) {
+          tradesExecuted.push({
+            symbol: opportunity.symbol,
+            signal: opportunity.signal,
+            quantity: riskAssessment.positionSize,
+            price: opportunity.currentPrice,
+            confidence: opportunity.confidence,
+            qppfScore: opportunity.qppfScore,
+            riskReward: opportunity.riskReward,
+            tradeResult,
+            timestamp: new Date()
+          });
+          
+          console.log(`✅ Trade executed: ${opportunity.signal} ${riskAssessment.positionSize} ${opportunity.symbol}`);
+          tradingReport += `EXECUTED: ${opportunity.signal} ${riskAssessment.positionSize} ${opportunity.symbol} @ $${opportunity.currentPrice.toFixed(2)} (${(opportunity.confidence*100).toFixed(1)}% confidence)\n`;
+        } else {
+          console.log(`❌ Trade failed for ${opportunity.symbol}: ${tradeResult.error}`);
+          tradingReport += `FAILED: ${opportunity.symbol} - ${tradeResult.error}\n`;
+        }
+        
+        // Small delay between trades
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (error) {
+        console.error(`Error executing trade for ${opportunity.symbol}:`, error);
+        tradingReport += `ERROR: ${opportunity.symbol} - ${error.message}\n`;
+      }
+    }
+    
+    tradingReport += `\nTrades Executed: ${tradesExecuted.length}/${maxTrades} max\n`;
+    tradingReport += `Timestamp: ${new Date().toISOString()}`;
+    
+    console.log(`🎯 Auto-trading complete: ${tradesExecuted.length} trades executed`);
+    
+    return {
+      scanResults,
+      tradesExecuted,
+      tradingReport
+    };
+  }
+
+  /**
    * Enhance QPPF scores with Unusual Whales data
    */
   private async enhanceWithUnusualWhales(symbol: string, scores: QPPFScores): Promise<void> {

@@ -811,6 +811,113 @@ api.get('/scanner/config', async (c) => {
 });
 
 /**
+ * Scan entire market and automatically execute trades on best opportunities
+ */
+api.post('/scanner/auto-trade', async (c) => {
+  if (!qppfScanner || !alpacaService || !riskManager) {
+    return c.json({ 
+      error: 'Scanner, Alpaca service, or Risk Manager not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const maxTrades = body.maxTrades || 3;
+    const minConfidence = body.minConfidence || 0.75;
+    
+    console.log(`🚀 Starting auto-trade scan: max ${maxTrades} trades, min ${(minConfidence*100).toFixed(0)}% confidence`);
+    
+    const result = await qppfScanner.scanAndTrade(
+      alpacaService, 
+      riskManager, 
+      maxTrades, 
+      minConfidence
+    );
+
+    return c.json({
+      success: true,
+      ...result,
+      summary: {
+        totalScanned: result.scanResults.scanMetrics.totalOpportunities,
+        tradesExecuted: result.tradesExecuted.length,
+        successRate: result.tradesExecuted.length > 0 ? 
+          (result.tradesExecuted.filter(t => t.tradeResult.success).length / result.tradesExecuted.length * 100).toFixed(1) + '%' 
+          : '0%',
+        marketRegime: result.scanResults.marketRegime
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error in auto-trade scan:', error);
+    return c.json({ 
+      error: 'Failed to execute auto-trade scan',
+      details: error.message,
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get current trading status and positions
+ */
+api.get('/scanner/trading-status', async (c) => {
+  if (!alpacaService) {
+    return c.json({ 
+      error: 'Alpaca service not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const account = await alpacaService.getAccount();
+    const positions = await alpacaService.getPositions();
+    const recentOrders = await alpacaService.getRecentOrders(10);
+    
+    if (!account) {
+      return c.json({ 
+        error: 'Failed to get account information',
+        success: false 
+      }, 500);
+    }
+
+    return c.json({
+      success: true,
+      account: {
+        equity: parseFloat(account.equity),
+        buyingPower: parseFloat(account.buying_power),
+        dayTradeCount: account.daytrade_count,
+        portfolioValue: parseFloat(account.portfolio_value)
+      },
+      positions: positions.map(pos => ({
+        symbol: pos.symbol,
+        qty: parseFloat(pos.qty),
+        side: pos.side,
+        marketValue: parseFloat(pos.market_value),
+        unrealizedPl: parseFloat(pos.unrealized_pl),
+        unrealizedPlpc: parseFloat(pos.unrealized_plpc)
+      })),
+      recentTrades: recentOrders?.slice(0, 5).map(order => ({
+        symbol: order.symbol,
+        side: order.side,
+        qty: order.qty,
+        status: order.status,
+        submittedAt: order.submitted_at
+      })) || [],
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error getting trading status:', error);
+    return c.json({ 
+      error: 'Failed to get trading status',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
  * Get algorithm configuration and endpoints info
  */
 api.get('/info', async (c) => {
@@ -833,6 +940,8 @@ api.get('/info', async (c) => {
       'scanner-scan': 'GET /api/scanner/scan - Run market-wide QPPF scanning for opportunities',
       'scanner-analyze': 'GET /api/scanner/analyze/:symbol - Get detailed QPPF analysis for specific symbol',
       'scanner-config': 'GET /api/scanner/config - Get scanner configuration and supported symbols',
+      'scanner-auto-trade': 'POST /api/scanner/auto-trade - Scan market and automatically execute trades on best opportunities',
+      'scanner-trading-status': 'GET /api/scanner/trading-status - Get current account status and positions',
       
       // Unusual Whales Data
       'options-flow': 'GET /api/options-flow/:symbol - Get options flow data',
@@ -854,6 +963,7 @@ api.get('/info', async (c) => {
       qppfStockScanner: true,
       multifactorAnalysis: true,
       marketWideScanning: true,
+      marketWideAutoTrading: true,
       riskManagement: true,
       positionSizing: true,
       paperTrading: true,
