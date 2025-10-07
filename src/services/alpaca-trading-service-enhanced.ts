@@ -486,15 +486,30 @@ export class EnhancedAlpacaTradingService {
   }
 
   /**
-   * Get current market price for a symbol
+   * Get current market price for a symbol using Alpaca Market Data API
    */
   async getCurrentPrice(symbol: string): Promise<number | null> {
     try {
-      const response = await this.apiCall<any>(`/v2/stocks/${symbol.toUpperCase()}/quotes/latest`);
+      // Use Alpaca Market Data API directly (different from trading API)
+      const response = await fetch(`https://data.alpaca.markets/v2/stocks/${symbol.toUpperCase()}/quotes/latest`, {
+        headers: {
+          'Apca-Api-Key-Id': this.credentials.apiKeyId,
+          'Apca-Api-Secret-Key': this.credentials.secretKey,
+        }
+      });
       
-      if (response.data && !response.error) {
-        const quote = response.data.quote;
-        return (parseFloat(quote.bid_price) + parseFloat(quote.ask_price)) / 2;
+      if (response.ok) {
+        const data = await response.json();
+        const quote = data.quote;
+        
+        if (quote && quote.bp && quote.ap) {
+          // Use bid (bp) and ask (ap) prices
+          const price = (parseFloat(quote.bp) + parseFloat(quote.ap)) / 2;
+          console.log(`✅ Alpaca market price for ${symbol}: $${price.toFixed(2)} (bid: ${quote.bp}, ask: ${quote.ap})`);
+          return price;
+        }
+      } else {
+        console.error(`Alpaca market data API error: ${response.status} ${response.statusText}`);
       }
       
       return null;

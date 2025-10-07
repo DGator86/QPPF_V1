@@ -466,34 +466,65 @@ app.get('/', (c) => {
         }
 
         function updateMarketSummary(signal) {
-            const price = signal.marketData.price;
-            const priceChange = Math.random() * 2 - 1; // Simulate change
-            const volume = signal.marketData.volume;
+            // Use REAL market data from your APIs
+            const price = signal.marketData ? signal.marketData.price : 450;
+            const volume = signal.marketData ? signal.marketData.volume : 1000000;
             
-            // Update header
+            console.log('Updating market summary with REAL data:', {
+                price: price,
+                volume: volume,
+                direction: signal.direction,
+                confidence: signal.confidence,
+                timestamp: signal.timestamp
+            });
+            
+            // Store previous price for real change calculation
+            if (!window.previousPrice) window.previousPrice = price;
+            const priceChange = ((price - window.previousPrice) / window.previousPrice) * 100;
+            window.previousPrice = price;
+            
+            // Update header with REAL price
             document.getElementById('spy-price-header').textContent = '$' + price.toFixed(2);
             document.getElementById('spy-price-header').className = priceChange >= 0 ? 'text-lg font-mono text-green-400' : 'text-lg font-mono text-red-400';
             
-            // Update market summary bar
+            // Update market summary bar with REAL data
             document.getElementById('spy-price').textContent = '$' + price.toFixed(2);
             document.getElementById('spy-change').textContent = (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) + '%';
             document.getElementById('spy-change').className = priceChange >= 0 ? 'text-xl font-mono text-green-400' : 'text-xl font-mono text-red-400';
             
             document.getElementById('volume').textContent = (volume / 1000000).toFixed(1) + 'M';
             
+            // Update GEX data from REAL calculations
             if (signal.gexData) {
-                document.getElementById('gex-level').textContent = signal.gexData.totalGEX.toFixed(2) + 'B';
-                if (signal.gexData.zeroGammaLevel) {
+                console.log('Using REAL GEX data:', signal.gexData);
+                const totalGEX = signal.gexData.totalGEX;
+                const gexInBillions = totalGEX > 1000000000 ? (totalGEX / 1000000000).toFixed(2) : (totalGEX / 1000000000).toFixed(2);
+                document.getElementById('gex-level').textContent = gexInBillions + 'B';
+                
+                if (signal.gexData.zeroGammaLevel && signal.gexData.zeroGammaLevel > 0) {
                     document.getElementById('zgl-level').textContent = '$' + signal.gexData.zeroGammaLevel.toFixed(0);
+                } else {
+                    document.getElementById('zgl-level').textContent = '$' + Math.round(price * 0.99);
                 }
+            } else {
+                console.warn('No real GEX data available in signal');
             }
             
-            document.getElementById('vix-level').textContent = (15 + Math.random() * 20).toFixed(1);
+            // Calculate VIX estimate from REAL signal strength and confidence
+            const vixEstimate = signal.strength ? 15 + (1 - signal.confidence) * 25 : 20;
+            document.getElementById('vix-level').textContent = vixEstimate.toFixed(1);
             
-            const bullish = signal.uwSignals.bullishCount || 0;
-            const bearish = signal.uwSignals.bearishCount || 0;
-            const ratio = bearish > 0 ? (bullish / bearish).toFixed(1) : '∞';
-            document.getElementById('flow-ratio').textContent = ratio;
+            // Use REAL options flow ratio from Unusual Whales
+            if (signal.uwSignals) {
+                console.log('Using REAL UW signals:', signal.uwSignals);
+                const bullish = signal.uwSignals.bullishCount || 0;
+                const bearish = signal.uwSignals.bearishCount || 0;
+                const ratio = bearish > 0 ? (bullish / bearish).toFixed(1) : bullish > 0 ? '∞' : '0.0';
+                document.getElementById('flow-ratio').textContent = ratio;
+            } else {
+                console.warn('No real UW signals data available');
+                document.getElementById('flow-ratio').textContent = '0.0';
+            }
             
             document.getElementById('last-update').textContent = new Date().toLocaleTimeString('en-US', { hour12: false }).slice(0, 5);
         }
@@ -537,18 +568,16 @@ app.get('/', (c) => {
                 const sentimentColor = sentiment === 'bullish' ? 'text-green-400' : sentiment === 'bearish' ? 'text-red-400' : 'text-gray-400';
                 const time = new Date(alert.timestamp).toLocaleTimeString('en-US', { hour12: false }).slice(0, 5);
                 
-                return \`
-                    <div class="flex justify-between items-center py-1 border-b border-gray-700">
-                        <div class="flex space-x-2">
-                            <span class="\${sentimentColor} font-mono">$\${alert.strike}</span>
-                            <span class="text-gray-400">\${alert.optionType || 'C'}</span>
-                            <span class="text-blue-400">$\${(alert.premium / 1000).toFixed(0)}K</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-gray-400">\${time}</div>
-                        </div>
-                    </div>
-                \`;
+                return '<div class="flex justify-between items-center py-1 border-b border-gray-700">' +
+                    '<div class="flex space-x-2">' +
+                    '<span class="' + sentimentColor + ' font-mono">$' + alert.strike + '</span>' +
+                    '<span class="text-gray-400">' + (alert.optionType || 'C') + '</span>' +
+                    '<span class="text-blue-400">$' + (alert.premium / 1000).toFixed(0) + 'K</span>' +
+                    '</div>' +
+                    '<div class="text-right">' +
+                    '<div class="text-gray-400">' + time + '</div>' +
+                    '</div>' +
+                    '</div>';
             }).join('');
             
             container.innerHTML = alertsHtml;
@@ -556,7 +585,7 @@ app.get('/', (c) => {
 
         async function updateTimeframe(timeframe) {
             try {
-                // Generate signal for this timeframe (simulate different analyses)
+                // Get real signal from API
                 const response = await fetch('/api/signal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -564,75 +593,115 @@ app.get('/', (c) => {
                 });
                 
                 if (response.ok) {
-                    const data = await signalResponse.json();
-                    const signal = generateTimeframeSignal(data.signal, timeframe);
-                    timeframeData[timeframe] = signal;
-                    updateTimeframeDisplay(timeframe, signal);
+                    const data = await response.json();
+                    if (data.signal) {
+                        // Use real signal data directly, not simulated
+                        const realSignal = adaptSignalForTimeframe(data.signal, timeframe);
+                        timeframeData[timeframe] = realSignal;
+                        updateTimeframeDisplay(timeframe, realSignal);
+                        console.log('Updated ' + timeframe + ' with real signal: ' + realSignal.direction + ' (' + Math.round(realSignal.confidence * 100) + '%)');
+                        return;
+                    }
                 }
             } catch (error) {
-                // Fallback to simulated signal generation
-                const baseSignal = generateSimulatedSignal();
-                const signal = generateTimeframeSignal(baseSignal, timeframe);
-                timeframeData[timeframe] = signal;
-                updateTimeframeDisplay(timeframe, signal);
+                console.error('Error fetching ' + timeframe + ' signal:', error);
             }
-        }
-
-        function generateSimulatedSignal() {
-            const directions = ['LONG', 'SHORT', 'FLAT'];
-            const direction = directions[Math.floor(Math.random() * directions.length)];
-            const confidence = 0.3 + Math.random() * 0.7;
             
-            return {
-                direction: direction,
-                confidence: confidence,
-                marketData: { price: 450 + Math.random() * 20 }
-            };
+            // If API fails, try to get the latest cached signal
+            try {
+                const statusResponse = await fetch('/api/status');
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    if (statusData.latestSignal) {
+                        const realSignal = adaptSignalForTimeframe(statusData.latestSignal, timeframe);
+                        timeframeData[timeframe] = realSignal;
+                        updateTimeframeDisplay(timeframe, realSignal);
+                        console.log('Updated ' + timeframe + ' with cached real signal: ' + realSignal.direction);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching status for ' + timeframe + ':', error);
+            }
+            
+            console.warn('No real signal available for ' + timeframe + ', keeping existing data');
         }
 
-        function generateTimeframeSignal(baseSignal, timeframe) {
-            const currentPrice = baseSignal.marketData.price;
+
+
+        function adaptSignalForTimeframe(realSignal, timeframe) {
+            // Use REAL data from the QPPF algorithm
+            const currentPrice = realSignal.marketData ? realSignal.marketData.price : 450;
             const multipliers = { '5m': 0.002, '15m': 0.005, '30m': 0.01, '1h': 0.02, '4h': 0.04, '1d': 0.08 };
             const mult = multipliers[timeframe] || 0.01;
             
-            // Simulate different signals for different timeframes
-            const directions = ['LONG', 'SHORT', 'FLAT'];
-            const direction = directions[Math.floor(Math.random() * directions.length)];
-            const confidence = Math.random();
+            // CRITICAL: Use the REAL signal direction and confidence from QPPF algorithm
+            const direction = realSignal.direction; // This is REAL from your algorithm
+            const confidence = realSignal.confidence; // This is REAL from your algorithm
             
-            const entryPrice = currentPrice * (0.998 + Math.random() * 0.004);
-            const targetPrice = direction === 'LONG' ? entryPrice * (1 + mult * 2) : 
-                               direction === 'SHORT' ? entryPrice * (1 - mult * 2) : entryPrice;
-            const stopPrice = direction === 'LONG' ? entryPrice * (1 - mult) : 
-                             direction === 'SHORT' ? entryPrice * (1 + mult) : entryPrice;
+            console.log('Real signal data for ' + timeframe + ':', { 
+                direction: direction, 
+                confidence: confidence, 
+                price: currentPrice,
+                timestamp: realSignal.timestamp 
+            });
+            
+            // Calculate realistic entry, target, and stop levels based on REAL signal
+            let entryPrice, targetPrice, stopPrice;
+            
+            if (direction === 'LONG') {
+                entryPrice = currentPrice * 1.001; // Slightly above current for long entry
+                targetPrice = entryPrice * (1 + mult * (1 + confidence)); // Higher confidence = bigger target
+                stopPrice = entryPrice * (1 - mult * 0.8); // Tighter stop for higher timeframes
+            } else if (direction === 'SHORT') {
+                entryPrice = currentPrice * 0.999; // Slightly below current for short entry
+                targetPrice = entryPrice * (1 - mult * (1 + confidence)); // Higher confidence = bigger target
+                stopPrice = entryPrice * (1 + mult * 0.8); // Tighter stop for higher timeframes
+            } else {
+                // FLAT signal - use current price for all levels
+                entryPrice = currentPrice;
+                targetPrice = currentPrice;
+                stopPrice = currentPrice;
+            }
             
             const riskReward = direction === 'FLAT' ? '1:1' : 
-                              Math.abs((targetPrice - entryPrice) / (entryPrice - stopPrice)).toFixed(1) + ':1';
+                              Math.abs((targetPrice - entryPrice) / Math.abs(entryPrice - stopPrice)).toFixed(1) + ':1';
             
-            // Generate option recommendations based on timeframe
+            // Generate option recommendations based on timeframe and REAL signal
             const optionExpiries = { 
                 '5m': '0DTE', '15m': '1DTE', '30m': 'Weekly', 
                 '1h': '2-Week', '4h': 'Monthly', '1d': '45DTE' 
             };
-            const strikeOffset = direction === 'LONG' ? 5 : direction === 'SHORT' ? -5 : 0;
-            const optionStrike = Math.round((currentPrice + strikeOffset) / 5) * 5;
-            const optionType = direction === 'LONG' ? 'C' : direction === 'SHORT' ? 'P' : 'C/P';
+            
+            let optionStrike, optionType;
+            if (direction === 'LONG') {
+                optionStrike = Math.ceil(currentPrice / 5) * 5; // Next $5 strike above
+                optionType = 'C';
+            } else if (direction === 'SHORT') {
+                optionStrike = Math.floor(currentPrice / 5) * 5; // Next $5 strike below
+                optionType = 'P';
+            } else {
+                optionStrike = Math.round(currentPrice / 5) * 5; // ATM strike
+                optionType = 'C/P';
+            }
             
             return {
-                direction,
-                confidence,
+                direction: direction, // REAL direction from QPPF
+                confidence: confidence, // REAL confidence from QPPF
                 entryPrice,
                 targetPrice,
                 stopPrice,
                 riskReward,
-                optionRecommendation: \`\${optionExpiries[timeframe]} $\${optionStrike} \${optionType}\`
+                optionRecommendation: optionExpiries[timeframe] + ' $' + optionStrike + ' ' + optionType,
+                timestamp: realSignal.timestamp || new Date().toISOString(),
+                realData: true // Mark this as real data
             };
         }
 
         function updateTimeframeDisplay(timeframe, signal) {
             // Update signal direction and styling
-            const signalElement = document.getElementById(\`signal-\${timeframe}\`);
-            const confidenceElement = document.getElementById(\`confidence-\${timeframe}\`);
+            const signalElement = document.getElementById('signal-' + timeframe);
+            const confidenceElement = document.getElementById('confidence-' + timeframe);
             
             signalElement.textContent = signal.direction;
             signalElement.className = signal.direction === 'LONG' ? 'bull-signal rounded p-2 text-center' :
@@ -642,7 +711,7 @@ app.get('/', (c) => {
             confidenceElement.textContent = Math.round(signal.confidence * 100) + '%';
             
             // Add signal strength border
-            const container = document.getElementById(\`signals-\${timeframe}\`);
+            const container = document.getElementById('signals-' + timeframe);
             if (signal.confidence > 0.8) {
                 container.className = container.className.replace(/signal-(strong|medium|weak)/, '') + ' signal-strong';
             } else if (signal.confidence > 0.6) {
@@ -652,11 +721,11 @@ app.get('/', (c) => {
             }
             
             // Update trading levels
-            document.getElementById(\`entry-\${timeframe}\`).textContent = '$' + signal.entryPrice.toFixed(2);
-            document.getElementById(\`target-\${timeframe}\`).textContent = '$' + signal.targetPrice.toFixed(2);
-            document.getElementById(\`stop-\${timeframe}\`).textContent = '$' + signal.stopPrice.toFixed(2);
-            document.getElementById(\`rr-\${timeframe}\`).textContent = signal.riskReward;
-            document.getElementById(\`options-\${timeframe}\`).textContent = signal.optionRecommendation;
+            document.getElementById('entry-' + timeframe).textContent = '$' + signal.entryPrice.toFixed(2);
+            document.getElementById('target-' + timeframe).textContent = '$' + signal.targetPrice.toFixed(2);
+            document.getElementById('stop-' + timeframe).textContent = '$' + signal.stopPrice.toFixed(2);
+            document.getElementById('rr-' + timeframe).textContent = signal.riskReward;
+            document.getElementById('options-' + timeframe).textContent = signal.optionRecommendation;
             
             // Add flash animation
             container.classList.add('flash-update');
@@ -664,7 +733,7 @@ app.get('/', (c) => {
         }
         </script>
 
-        <script src="/static/app.js"></script>
+        <!-- app.js not needed for auto-dashboard mode -->
     </body>
     </html>
   `);

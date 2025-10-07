@@ -9,11 +9,13 @@ import { QPPFAlgorithm, QPPFSignal, QPPFState } from '../services/qppf-algorithm
 import { UnusualWhalesClient } from '../services/unusual-whales-client';
 import { AlpacaTradingService, AlpacaCredentials, TradeSignal } from '../services/alpaca-trading-service-enhanced';
 import { RiskManager } from '../services/risk-manager';
+import { QPPFStockScanner } from '../services/qppf-stock-scanner';
 
 // Global instances (in production, use proper state management)
 let qppfAlgorithm: QPPFAlgorithm | null = null;
 let alpacaService: AlpacaTradingService | null = null;
 let riskManager: RiskManager | null = null;
+let qppfScanner: QPPFStockScanner | null = null;
 let isRunning = false;
 let latestSignal: QPPFSignal | null = null;
 
@@ -49,6 +51,13 @@ api.post('/initialize', async (c) => {
     
     // Initialize the QPPF algorithm
     qppfAlgorithm = new QPPFAlgorithm(config.unusualWhalesApiKey, symbol);
+    
+    // Initialize QPPF Stock Scanner with Unusual Whales integration
+    qppfScanner = new QPPFStockScanner(
+      config.alpacaApiKey, 
+      config.alpacaSecretKey, 
+      config.unusualWhalesApiKey
+    );
     
     // Initialize Alpaca service if credentials provided
     if (config.alpacaApiKey && config.alpacaSecretKey) {
@@ -691,6 +700,117 @@ api.post('/stop', async (c) => {
 });
 
 /**
+ * Run QPPF Stock Scanner for market opportunities
+ */
+api.get('/scanner/scan', async (c) => {
+  if (!qppfScanner) {
+    return c.json({ 
+      error: 'QPPF Scanner not initialized. Initialize the system first.',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    console.log('Running QPPF Stock Scanner...');
+    const scanResults = await qppfScanner.scanMarket();
+
+    return c.json({
+      success: true,
+      scanResults: {
+        timestamp: scanResults.timestamp,
+        totalSymbolsScanned: scanResults.scanMetrics.totalOpportunities,
+        buyOpportunities: scanResults.buyOpportunities,
+        sellOpportunities: scanResults.sellOpportunities,
+        marketRegime: scanResults.marketRegime,
+        scanMetrics: scanResults.scanMetrics,
+        totalOpportunities: scanResults.buyOpportunities.length + scanResults.sellOpportunities.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error running scanner:', error);
+    return c.json({ 
+      error: 'Failed to run market scanner',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get detailed analysis for a specific symbol
+ */
+api.get('/scanner/analyze/:symbol', async (c) => {
+  if (!qppfScanner) {
+    return c.json({ 
+      error: 'QPPF Scanner not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const symbol = c.req.param('symbol').toUpperCase();
+    console.log(`Analyzing symbol: ${symbol}`);
+    
+    const analysis = await qppfScanner.analyzeSymbol(symbol);
+    
+    if (!analysis) {
+      return c.json({ 
+        error: `No analysis available for symbol ${symbol}`,
+        success: false 
+      }, 404);
+    }
+
+    return c.json({
+      success: true,
+      symbol,
+      analysis,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error analyzing symbol:', error);
+    return c.json({ 
+      error: 'Failed to analyze symbol',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
+ * Get scanner configuration and supported symbols
+ */
+api.get('/scanner/config', async (c) => {
+  if (!qppfScanner) {
+    return c.json({ 
+      error: 'QPPF Scanner not initialized',
+      success: false 
+    }, 400);
+  }
+
+  try {
+    const config = {
+      scanConfig: qppfScanner.getConfig(),
+      weights: qppfScanner.getWeights(),
+      totalSupportedSymbols: qppfScanner.getConfig().universe.length
+    };
+    
+    return c.json({
+      success: true,
+      configuration: config,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('Error getting scanner config:', error);
+    return c.json({ 
+      error: 'Failed to get scanner configuration',
+      success: false 
+    }, 500);
+  }
+});
+
+/**
  * Get algorithm configuration and endpoints info
  */
 api.get('/info', async (c) => {
@@ -700,7 +820,7 @@ api.get('/info', async (c) => {
     description: 'Quantum Potential Price Flow Algorithm with Unusual Whales Integration and Live Alpaca Trading',
     endpoints: {
       // Core QPPF Algorithm
-      initialize: 'POST /api/initialize - Initialize algorithm with API keys (now includes Alpaca)',
+      initialize: 'POST /api/initialize - Initialize algorithm with API keys (now includes Scanner)',
       status: 'GET /api/status - Get current algorithm status',
       signal: 'POST /api/signal - Generate a single trading signal',
       'execute-trade': 'POST /api/execute-trade - Simulate trade execution',
@@ -708,6 +828,11 @@ api.get('/info', async (c) => {
       reset: 'POST /api/reset - Reset algorithm state',
       start: 'POST /api/start - Start continuous signal generation',
       stop: 'POST /api/stop - Stop continuous signal generation',
+      
+      // QPPF Stock Scanner
+      'scanner-scan': 'GET /api/scanner/scan - Run market-wide QPPF scanning for opportunities',
+      'scanner-analyze': 'GET /api/scanner/analyze/:symbol - Get detailed QPPF analysis for specific symbol',
+      'scanner-config': 'GET /api/scanner/config - Get scanner configuration and supported symbols',
       
       // Unusual Whales Data
       'options-flow': 'GET /api/options-flow/:symbol - Get options flow data',
@@ -726,6 +851,9 @@ api.get('/info', async (c) => {
     features: {
       unusualWhalesIntegration: true,
       alpacaLiveTrading: true,
+      qppfStockScanner: true,
+      multifactorAnalysis: true,
+      marketWideScanning: true,
       riskManagement: true,
       positionSizing: true,
       paperTrading: true,

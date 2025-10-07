@@ -31,12 +31,12 @@ export class RiskManager {
 
   constructor(params?: Partial<RiskParameters>) {
     this.params = {
-      maxPortfolioRisk: 0.02,
-      maxTradeRisk: 0.005,
-      minConfidence: 0.70,
-      maxRiskScore: 0.30,
-      maxDrawdown: 0.10,
-      maxPositionCount: 5,
+      maxPortfolioRisk: 0.05, // Increased from 2% to 5%
+      maxTradeRisk: 0.02,     // Increased from 0.5% to 2% - allows ~$2000 per trade
+      minConfidence: 0.60,    // Reduced from 70% to 60% to allow more trades
+      maxRiskScore: 0.50,     // Increased from 0.30 to 0.50 to be less restrictive
+      maxDrawdown: 0.15,      // Increased from 10% to 15%
+      maxPositionCount: 10,   // Increased from 5 to 10 positions
       ...params,
     };
   }
@@ -119,7 +119,7 @@ export class RiskManager {
     confidence: number,
     currentPrice: number
   ): number {
-    // Base risk amount (0.5% of portfolio)
+    // Base risk amount (now 2% of portfolio)
     const baseRiskAmount = portfolioValue * this.params.maxTradeRisk;
     
     // Adjust for confidence (70% confidence = 0.7x, 90% = 0.9x, etc.)
@@ -127,7 +127,11 @@ export class RiskManager {
     
     // Calculate shares
     const riskAmount = baseRiskAmount * confidenceMultiplier;
-    return riskAmount / currentPrice;
+    const shares = riskAmount / currentPrice;
+    
+    console.log(`💰 Position Sizing: Portfolio=$${portfolioValue}, Risk=${(this.params.maxTradeRisk*100)}%, Amount=$${baseRiskAmount.toFixed(2)}, Confidence=${confidence}, Price=$${currentPrice}, Shares=${shares.toFixed(2)}`);
+    
+    return shares;
   }
 
   /**
