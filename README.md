@@ -75,6 +75,16 @@
 - Risk management and position sizing
 - Order validation and error handling
 
+### **🚀 QPPF Stock Scanner - NEW!**
+✅ **Market-Wide Scanning System**
+- 114 supported symbols (major ETFs + S&P 500 components)
+- Multi-factor QPPF analysis across entire market
+- Real-time price feeds (Alpaca API: SPY $668.62, AAPL tested)
+- Unusual Whales integration for options flow sentiment enhancement
+- 6-factor scoring: momentum, mean reversion, volume, volatility, market structure, sentiment
+- BUY/SELL/HOLD signals with confidence scoring and risk/reward ratios
+- Smart rate limiting and synthetic historical data fallbacks
+
 ## 📊 Time-Domain Analysis System
 
 ### **Timeframe Structure**
@@ -121,6 +131,11 @@
 
 ### Risk Management
 - **GET** `/api/risk-assessment` - Get risk assessment for current signal
+
+### **🚀 QPPF Stock Scanner - NEW!**
+- **GET** `/api/scanner/scan` - Run market-wide QPPF scanning (114 symbols) 
+- **GET** `/api/scanner/analyze/:symbol` - Detailed QPPF analysis for specific symbol
+- **GET** `/api/scanner/config` - Scanner configuration and supported symbols
 
 ### Data Access
 - **GET** `/api/options-flow/:symbol?` - Get Unusual Whales options flow alerts
